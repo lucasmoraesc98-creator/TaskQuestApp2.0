@@ -9,27 +9,75 @@ import { Navbar } from './components/layouts/Navbar';
 import { Login } from './pages/Login';
 import { RegisterPage } from './pages/register.page';
 import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
+import BookSuggestions from './components/books/BookSuggestions';
+import ProgressAnalysis from './components/analysis/ProgressAnalysis';
 
 const queryClient = new QueryClient();
 
+// Tema escuro moderno
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
-      main: '#667eea',
+      main: '#00D4FF', // Ciano
+      light: '#66E3FF',
+      dark: '#00A3CC',
     },
     secondary: {
-      main: '#764ba2',
+      main: '#FF6B35', // Laranja/vermelho para urgente
     },
     background: {
-      default: '#f8fafc',
+      default: '#0F0F0F',
+      paper: '#1A1A1A',
+    },
+    text: {
+      primary: '#FFFFFF',
+      secondary: '#B0B0B0',
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
   },
   shape: {
     borderRadius: 12,
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#1A1A1A',
+          border: '1px solid #333',
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#1A1A1A',
+          borderBottom: '1px solid #333',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+        },
+      },
+    },
   },
 });
 
@@ -55,7 +103,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <><QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
@@ -63,21 +111,15 @@ function App() {
             <div className="App">
               <Navbar />
               <Routes>
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/register" element={
-                  <PublicRoute>
-                    <RegisterPage />
-                  </PublicRoute>
-                } />
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
+                <Route path="/login" element={<PublicRoute>
+                  <Login />
+                </PublicRoute>} />
+                <Route path="/register" element={<PublicRoute>
+                  <RegisterPage />
+                </PublicRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>} />
                 <Route path="/" element={<Navigate to="/dashboard" />} />
               </Routes>
             </div>
@@ -85,6 +127,13 @@ function App() {
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
+      <Route path="/settings" element={<ProtectedRoute>
+        <Settings />
+      </ProtectedRoute>} /><Route path="/books" element={<ProtectedRoute>
+        <BookSuggestions />
+      </ProtectedRoute>} /><Route path="/analysis" element={<ProtectedRoute>
+        <ProgressAnalysis />
+      </ProtectedRoute>} /></>
   );
 }
 

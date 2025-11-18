@@ -1,8 +1,12 @@
+// src/pages/Dashboard.tsx - VERSÃO CORRIGIDA
 import React from 'react';
-import { Grid, Typography, Box, Paper, LinearProgress, Card, CardContent } from '@mui/material'; // CORRIGIDO: Grid2
+import { Grid, Typography, Box, Paper, Card, CardContent } from '@mui/material';
 import { useAuth } from '../contexts/auth.context';
 import TaskList from '../components/tasks/TaskList';
 import AISuggestions from '../components/tasks/AISuggestions';
+import BookSuggestions from '../components/books/BookSuggestions';
+import ProgressAnalysis from '../components/analysis/ProgressAnalysis';
+import XPProgressBar from '../components/progress/XPProgressBar';
 import { useQuery } from '@tanstack/react-query';
 import { taskService } from '../services/task.service';
 
@@ -16,64 +20,107 @@ const Dashboard: React.FC = () => {
     enabled: !!user,
   });
 
-  const calculateXPProgress = () => {
-    if (!user) return 0;
-    const baseXP = 1000 + ((user.level - 1) * 100);
-    return (user.xp / baseXP) * 100;
-  };
+  const { data: todayStats } = useQuery({
+    queryKey: ['today-stats'],
+    queryFn: () => taskService.getTodayStats(),
+    enabled: !!user,
+  });
 
   if (isLoading) return <Typography>Carregando...</Typography>;
   if (error) return <Typography>Erro ao carregar tarefas</Typography>;
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      {/* CORRIGIDO: Grid container sem prop 'item' */}
       <Grid container spacing={3}>
-        {/* Header */}
-        <Grid size={{ xs: 12 }}> {/* CORRIGIDO: nova sintaxe do Grid2 */}
+        {/* Header com XP Progress */}
+        <Grid item xs={12}>
           <Paper sx={{ 
             p: 3, 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white'
+            background: 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(102,126,234,0.1) 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 3,
           }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography variant="h4" gutterBottom fontWeight="700">
               Bem-vindo, {user?.name}! 👋
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom color="text.secondary">
               Level {user?.level} • {user?.xp} XP
             </Typography>
-            <Box sx={{ width: '100%', mt: 2 }}>
-              <LinearProgress 
-                variant="determinate" 
-                value={calculateXPProgress()} 
-                sx={{ 
-                  height: 10, 
-                  borderRadius: 5,
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: 'white'
-                  }
-                }}
-              />
-            </Box>
+            
+            <XPProgressBar 
+              currentXP={user?.xp || 0} 
+              level={user?.level || 1} 
+            />
+
+            {/* Stats Rápidos */}
+            {todayStats && (
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Concluídas
+                  </Typography>
+                  <Typography variant="h6" color="success.main">
+                    {todayStats.completed}/{todayStats.total}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    XP Hoje
+                  </Typography>
+                  <Typography variant="h6" color="primary.main">
+                    {todayStats.totalXP}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Taxa
+                  </Typography>
+                  <Typography variant="h6" color="secondary.main">
+                    {Math.round(todayStats.completionRate)}%
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Pendentes
+                  </Typography>
+                  <Typography variant="h6" color="warning.main">
+                    {todayStats.pending}
+                  </Typography>
+                </Grid>
+              </Grid>
+            )}
           </Paper>
         </Grid>
 
-        {/* Tasks */}
-        <Grid size={{ xs: 12, md: 8 }}> {/* CORRIGIDO: nova sintaxe do Grid2 */}
-          <Card elevation={3}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom>
-                📝 Suas Tarefas de Hoje
-              </Typography>
-              <TaskList tasks={tasks || []} />
-            </CardContent>
-          </Card>
+        {/* Coluna Principal */}
+        <Grid item xs={12} lg={8}>
+          <Grid container spacing={3}>
+            {/* Tasks */}
+            <Grid item xs={12}>
+              <Card elevation={3}>
+                <CardContent>
+                  <TaskList tasks={tasks || []} />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Análise de Progresso */}
+            <Grid item xs={12}>
+              <ProgressAnalysis />
+            </Grid>
+          </Grid>
         </Grid>
 
-        {/* AI Suggestions */}
-        <Grid size={{ xs: 12, md: 4 }}> {/* CORRIGIDO: nova sintaxe do Grid2 */}
-          <AISuggestions />
+        {/* Sidebar */}
+        <Grid item xs={12} lg={4}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <AISuggestions />
+            </Grid>
+            <Grid item xs={12}>
+              <BookSuggestions />
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Box>

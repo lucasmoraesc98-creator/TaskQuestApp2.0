@@ -29,3 +29,22 @@ api.interceptors.response.use(
 );
 
 export default api;
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  level: number;
+  xp: number;
+  goals: string[];
+  challenges: string[];
+  preferences: {
+    morningPerson: boolean;
+    likesExercise: boolean;
+    worksFromHome: boolean;
+  };
+  productivityStyle: string;
+  lastActive?: string;
+  lastAnalysis?: string;
+}
+
+// ... outros tipos

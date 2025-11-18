@@ -46,7 +46,7 @@ export const Login: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+        <Paper elevation={3} sx={{ padding: 4, width: '100%', border: '1px solid #333' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom color="primary">
             🎯 TaskQuest
           </Typography>
@@ -68,6 +68,16 @@ export const Login: React.FC = () => {
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#00D4FF',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#00D4FF',
+                },
+              }}
             />
             <TextField
               margin="normal"
@@ -80,6 +90,16 @@ export const Login: React.FC = () => {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#00D4FF',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#00D4FF',
+                },
+              }}
             />
             <Button
               type="submit"

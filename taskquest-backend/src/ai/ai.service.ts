@@ -504,4 +504,17 @@ Gere EXATAMENTE ${count} sugestões diversificadas e de alto impacto:`;
       return false;
     }
   }
+  async generatePersonalizedSuggestions(userId: string, count: number = 3) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BadRequestException('Usuário não encontrado');
+    }
+
+    return this.generateRotatedSuggestions(
+      userId,
+      user.goals || [],
+      user.challenges || [],
+      count
+    );
+  }
 }

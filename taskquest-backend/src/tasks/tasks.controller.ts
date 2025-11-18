@@ -17,6 +17,8 @@ export class TasksController {
 
   @Post()
   @ApiOperation({ summary: 'Criar nova tarefa' })
+  @ApiResponse({ status: 201, description: 'Tarefa criada com sucesso' })
+  @ApiResponse({ status: 400, description: 'Limite diário atingido ou tarefa duplicada' })
   async create(@Request() req, @Body() createTaskDto: CreateTaskDto) {
     return this.tasksService.create({
       ...createTaskDto,
@@ -39,6 +41,12 @@ export class TasksController {
     return this.tasksService.getUserStats(req.user._id, targetDate);
   }
 
+  @Get('today-stats')
+  @ApiOperation({ summary: 'Obter estatísticas de hoje' })
+  async getTodayStats(@Request() req) {
+    return this.tasksService.getTodayTasksStats(req.user._id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obter tarefa específica' })
   async findOne(@Param('id') id: string) {
@@ -52,7 +60,9 @@ export class TasksController {
   }
 
   @Put(':id/complete')
-  @ApiOperation({ summary: 'Marcar tarefa como concluída' })
+  @ApiOperation({ summary: 'Marcar tarefa como concluída e ganhar XP' })
+  @ApiResponse({ status: 200, description: 'Tarefa concluída e XP adicionado' })
+  @ApiResponse({ status: 400, description: 'Limite diário de XP atingido' })
   async complete(@Param('id') id: string) {
     return this.tasksService.completeTask(id);
   }
@@ -66,6 +76,7 @@ export class TasksController {
   @Post('reset-daily')
   @ApiOperation({ summary: 'Resetar tarefas do dia' })
   async resetDaily(@Request() req) {
-    return this.tasksService.resetDailyTasks(req.user._id);
+    await this.tasksService.resetDailyTasks(req.user._id);
+    return { message: 'Tarefas do dia resetadas com sucesso' };
   }
 }

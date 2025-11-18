@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { IsOptional, IsArray, IsString, IsBoolean } from 'class-validator';
+import { IsOptional, IsArray, IsString } from 'class-validator'; // Removido IsBoolean
 import { ApiProperty } from '@nestjs/swagger';
 
 import { RegisterDto } from '../../auth/dto/register.dto';

@@ -7,6 +7,8 @@ import {
   Box,
   CircularProgress,
   Chip,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { AutoAwesome } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +17,11 @@ import { AISuggestion as AISuggestionType } from '../../types/api';
 
 const AISuggestions: React.FC = () => {
   const queryClient = useQueryClient();
+  const [snackbar, setSnackbar] = React.useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const { data: suggestions, isLoading, refetch, isError } = useQuery({
     queryKey: ['ai-suggestions'],
@@ -32,6 +39,10 @@ const AISuggestions: React.FC = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setSnackbar({ open: true, message: 'Tarefa adicionada!', severity: 'success' });
+    },
+    onError: () => {
+      setSnackbar({ open: true, message: 'Erro ao adicionar tarefa', severity: 'error' });
     },
   });
 
@@ -43,8 +54,12 @@ const AISuggestions: React.FC = () => {
     refetch();
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   return (
-    <Card elevation={3}>
+    <Card elevation={3} sx={{ border: '1px solid #333' }}>
       <CardContent>
         <Box display="flex" alignItems="center" gap={1} mb={2}>
           <AutoAwesome color="primary" />
@@ -57,6 +72,7 @@ const AISuggestions: React.FC = () => {
             variant="outlined"
             onClick={handleGenerateSuggestions}
             startIcon={<AutoAwesome />}
+            sx={{ borderColor: '#333', color: 'primary.main', '&:hover': { borderColor: '#00D4FF' } }}
           >
             Gerar Sugestões
           </Button>
@@ -86,6 +102,7 @@ const AISuggestions: React.FC = () => {
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 1,
+              backgroundColor: 'background.default',
             }}
           >
             <Typography variant="body1" gutterBottom>
@@ -96,6 +113,7 @@ const AISuggestions: React.FC = () => {
                 label={`+${suggestion.xp} XP`}
                 color="primary"
                 size="small"
+                variant="outlined"
               />
               <Button
                 size="small"
@@ -112,6 +130,12 @@ const AISuggestions: React.FC = () => {
           </Box>
         ))}
       </CardContent>
+
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };

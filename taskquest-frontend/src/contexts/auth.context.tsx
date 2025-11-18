@@ -8,6 +8,7 @@ interface AuthContextData {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  setUser: (user: User) => void; // ADICIONAR ESTA LINHA
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -15,8 +16,9 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -58,3 +60,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+  const setUser = (newUser: User) => {
+    setUserState(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+  };
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      register, 
+      logout, 
+      loading, 
+      setUser // ADICIONAR AQUI
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+

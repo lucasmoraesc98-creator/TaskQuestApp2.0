@@ -40,10 +40,15 @@ export class UsersService {
       id,
       {
         $set: {
-          goals: profileData.goals,
-          challenges: profileData.challenges,
-          preferences: profileData.preferences,
-          productivityStyle: profileData.productivityStyle,
+          goals: profileData.goals || [],
+          challenges: profileData.challenges || [],
+          preferences: profileData.preferences || {
+            morningPerson: true,
+            likesExercise: true,
+            worksFromHome: false,
+          },
+          productivityStyle: profileData.productivityStyle || 'balanced',
+          lastActive: new Date(),
         },
       },
       { new: true },
@@ -62,5 +67,64 @@ export class UsersService {
       },
       { new: true },
     );
+  }
+
+  async updateUserGoals(id: string, goals: string[]): Promise<User> {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          goals: goals,
+          lastActive: new Date(),
+        },
+      },
+      { new: true },
+    );
+  }
+
+  async updateUserChallenges(id: string, challenges: string[]): Promise<User> {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          challenges: challenges,
+          lastActive: new Date(),
+        },
+      },
+      { new: true },
+    );
+  }
+
+  async updateUserPreferences(id: string, preferences: any): Promise<User> {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          preferences: {
+            morningPerson: preferences.morningPerson ?? true,
+            likesExercise: preferences.likesExercise ?? true,
+            worksFromHome: preferences.worksFromHome ?? false,
+          },
+          lastActive: new Date(),
+        },
+      },
+      { new: true },
+    );
+  }
+
+  async getUserProfileForAI(id: string): Promise<any> {
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return {
+      goals: user.goals,
+      challenges: user.challenges,
+      preferences: user.preferences,
+      productivityStyle: user.productivityStyle,
+      level: user.level,
+      lastAnalysis: user.lastAnalysis,
+    };
   }
 }

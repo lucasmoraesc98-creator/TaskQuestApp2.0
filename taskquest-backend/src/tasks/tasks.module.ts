@@ -9,7 +9,7 @@ import { ProgressModule } from '../progress/progress.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Task.name, schema: TaskSchema }]),
-    ProgressModule, // ← IMPORTAR ProgressModule
+    ProgressModule,
   ],
   controllers: [TasksController],
   providers: [TasksService],

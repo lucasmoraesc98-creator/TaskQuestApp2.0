@@ -17,6 +17,8 @@
 }
 
 export interface Task {
+  user: any;
+  task: any;
   _id: string;
   userId: string;
   text: string;
