@@ -30,6 +30,17 @@ export const taskService = {
   async getAISuggestions(count: number = 3): Promise<AISuggestion[]> {
     const response = await api.post('/ai/suggestions', { count });
     return response.data;
+  },
+
+  async getTodayStats(): Promise<any> {
+    const response = await api.get('/tasks/today-stats');
+    return response.data;
+  },
+
+  async getUserStats(date?: string): Promise<any> {
+    const params = date ? { date } : {};
+    const response = await api.get('/tasks/stats', { params });
+    return response.data;
   }
   async getTodayStats(): Promise<any> {
     const response = await api.get('/tasks/today-stats');

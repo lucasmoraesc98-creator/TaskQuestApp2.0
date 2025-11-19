@@ -1,4 +1,3 @@
-// src/components/books/BookSuggestions.tsx - VERSÃO CORRIGIDA
 import React, { useState } from 'react';
 import {
   Card,
@@ -51,23 +50,13 @@ const BookSuggestions: React.FC = () => {
       const data = await response.json();
       return data.items as Book[];
     },
-    staleTime: 1000 * 60 * 60, // 1 hora
+    staleTime: 1000 * 60 * 60,
   });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentQuery(searchQuery);
   };
-
-  const productivityCategories = [
-    'Productivity',
-    'Personal Development', 
-    'Time Management',
-    'Self Improvement',
-    'Business',
-    'Psychology',
-    'Motivational'
-  ];
 
   return (
     <Card elevation={3} sx={{ height: '100%' }}>
@@ -79,7 +68,6 @@ const BookSuggestions: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Busca */}
         <form onSubmit={handleSearch}>
           <Box display="flex" gap={1} mb={3}>
             <TextField
@@ -105,7 +93,6 @@ const BookSuggestions: React.FC = () => {
           </Box>
         </form>
 
-        {/* Resultados */}
         <AnimatePresence>
           {isLoading && (
             <motion.div
@@ -148,9 +135,9 @@ const BookSuggestions: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Grid container spacing={2}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
                 {books.map((book) => (
-                  <Grid item xs={12} key={book.id}>
+                  <Box key={book.id}>
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       transition={{ type: "spring", stiffness: 300 }}
@@ -164,7 +151,6 @@ const BookSuggestions: React.FC = () => {
                       >
                         <CardContent>
                           <Box display="flex" gap={2}>
-                            {/* Capa do Livro */}
                             {book.volumeInfo.imageLinks?.thumbnail && (
                               <img
                                 src={book.volumeInfo.imageLinks.thumbnail}
@@ -178,7 +164,6 @@ const BookSuggestions: React.FC = () => {
                               />
                             )}
                             
-                            {/* Informações */}
                             <Box flex={1}>
                               <Typography variant="h6" fontWeight="600" gutterBottom>
                                 {book.volumeInfo.title}
@@ -233,9 +218,9 @@ const BookSuggestions: React.FC = () => {
                         </CardContent>
                       </Card>
                     </motion.div>
-                  </Grid>
+                  </Box>
                 ))}
-              </Grid>
+              </Box>
             </motion.div>
           )}
         </AnimatePresence>

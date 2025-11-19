@@ -8,7 +8,7 @@ interface AuthContextData {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
-  setUser: (user: User) => void; // ADICIONAR ESTA LINHA
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -19,17 +19,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const setUser = (newUser: User) => {
+    setUserState(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-      // Verificar se o token ainda é válido
-      authService.getProfile().catch(() => {
+      try {
+        setUser(JSON.parse(savedUser));
+        authService.getProfile().catch(() => {
+          logout();
+        });
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
         logout();
-      });
+      }
     }
     setLoading(false);
   }, []);
@@ -51,31 +59,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null);
+    setUserState(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-  const setUser = (newUser: User) => {
-    setUserState(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
-
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      register, 
-      logout, 
-      loading, 
-      setUser // ADICIONAR AQUI
+    <AuthContext.Provider value={{
+      user,
+      login,
+      register,
+      logout,
+      loading,
+      setUser
     }}>
       {children}
     </AuthContext.Provider>
   );
 };
-

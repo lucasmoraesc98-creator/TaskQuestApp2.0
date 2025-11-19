@@ -1,34 +1,54 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema({ timestamps: true })
-export class Progress extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
-  userId: Types.ObjectId;
+// SOLUÇÃO ALTERNATIVA: Definir _id explicitamente
+export interface ProgressDocument extends Progress, Document<Types.ObjectId> {
+  _id: Types.ObjectId;
+}
 
-  @Prop({ default: 1 })
+@Schema()
+export class DailyStat {
+  @Prop({ required: true })
+  date: string;
+
+  @Prop({ required: true, default: 0 })
+  xpEarned: number;
+
+  @Prop({ required: true, default: 0 })
+  tasksCompleted: number;
+}
+
+@Schema()
+export class Progress {
+  @Prop({ required: true, unique: true })
+  userId: string;
+
+  @Prop({ required: true, default: 1 })
   level: number;
 
-  @Prop({ default: 0 })
+  @Prop({ required: true, default: 0 })
   xp: number;
 
-  @Prop({ default: 0 })
-  completedToday: number;
+  @Prop({ required: true, default: 0 })
+  totalXP: number;
 
-  @Prop({ default: 0 })
-  totalCompleted: number;
+  @Prop({ required: true, default: 0 })
+  currentStreak: number;
 
-  @Prop({ default: 0 })
+  @Prop({ required: true, default: 0 })
+  longestStreak: number;
+
+  @Prop({ required: true, default: 0 })
+  tasksCompleted: number;
+
+  @Prop({ required: true, default: 0 })
   dailyXP: number;
 
-  @Prop({ default: 0 })
-  streak: number;
+  @Prop({ required: true, default: Date.now })
+  lastActivity: Date;
 
-  @Prop({ default: Date.now })
-  lastActive: Date;
-
-  @Prop({ type: Date })
-  lastReset: Date;
+  @Prop({ type: [DailyStat], default: [] })
+  dailyStats: DailyStat[];
 }
 
 export const ProgressSchema = SchemaFactory.createForClass(Progress);
