@@ -37,16 +37,23 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" sx={{ height: '100vh', display: 'flex', alignItems: 'center' }}>
       <Box
         sx={{
-          marginTop: 8,
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          padding: 2,
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%', border: '1px solid #333' }}>
+        <Paper elevation={3} sx={{ 
+          padding: { xs: 2, sm: 4 },
+          width: '100%', 
+          border: '1px solid #333',
+          borderRadius: 2,
+          boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1)'
+        }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom color="primary">
             🎯 TaskQuest
           </Typography>
@@ -108,7 +115,7 @@ export const Login: React.FC = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : 'Entrar'}
+              {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Entrar'}
             </Button>
             <Box textAlign="center">
               <Link to="/register" style={{ textDecoration: 'none', color: 'inherit' }}>

@@ -171,10 +171,21 @@ export const Navbar: React.FC = () => {
             </Box>
 
             {/* Menu Mobile */}
-            <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1 }}>
               <IconButton color="inherit" onClick={handleMobileMenu}>
                 <MenuIcon />
               </IconButton>
+              <Chip 
+                label={`Lv${user.level}`}
+                color="primary"
+                size="small"
+                sx={{ fontWeight: 700 }}
+              />
+              <Chip 
+                label={`${user.xp} XP`}
+                color="secondary"
+                size="small"
+              />
             </Box>
           </motion.div>
         )}
