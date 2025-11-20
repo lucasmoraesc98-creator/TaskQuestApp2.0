@@ -7,9 +7,8 @@ import {
   Box,
   CircularProgress,
   TextField,
-  Grid,
-  Rating,
   Alert,
+  Rating,
 } from '@mui/material';
 import { AutoStories, Search, Download } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,13 +31,17 @@ interface Book {
   };
 }
 
+interface BooksResponse {
+  items: Book[];
+}
+
 const BookSuggestions: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('productivity personal development');
   const [currentQuery, setCurrentQuery] = useState('productivity personal development');
 
-  const { data: books, isLoading, error, refetch } = useQuery({
+  const { data: books, isLoading, error, refetch } = useQuery<Book[], Error>({
     queryKey: ['books', currentQuery],
-    queryFn: async () => {
+    queryFn: async (): Promise<Book[]> => {
       const response = await fetch(
         `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(currentQuery)}&maxResults=6&orderBy=relevance`
       );
@@ -47,8 +50,8 @@ const BookSuggestions: React.FC = () => {
         throw new Error('Erro ao buscar livros');
       }
       
-      const data = await response.json();
-      return data.items as Book[];
+      const data: BooksResponse = await response.json();
+      return data.items || [];
     },
     staleTime: 1000 * 60 * 60,
   });
@@ -116,7 +119,7 @@ const BookSuggestions: React.FC = () => {
               exit={{ opacity: 0 }}
             >
               <Alert severity="error" sx={{ mb: 2 }}>
-                Erro ao carregar sugestões de livros
+                {error.message}
               </Alert>
               <Button
                 fullWidth

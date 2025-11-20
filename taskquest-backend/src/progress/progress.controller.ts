@@ -1,7 +1,4 @@
-Updated upstream
-
 /* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common'; // Removido Put
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

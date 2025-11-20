@@ -85,9 +85,6 @@ export class TasksService {
     }
   }
 
-<<<<<<< Updated upstream
-  async completeTask(id: string): Promise<{ task: Task; leveledUp?: boolean; levelsGained?: number; newLevel?: number }> {
-=======
   async completeTask(id: string): Promise<{ 
     task: Task; 
     leveledUp?: boolean; 
@@ -95,7 +92,6 @@ export class TasksService {
     newLevel?: number;
     currentStreak?: number;
   }> {
->>>>>>> Stashed changes
     const task = await this.taskModel.findById(id);
     if (!task) {
       throw new NotFoundException('Tarefa não encontrada');
@@ -125,12 +121,8 @@ export class TasksService {
         task: updatedTask,
         leveledUp: progressResult.leveledUp,
         levelsGained: progressResult.levelsGained,
-<<<<<<< Updated upstream
-        newLevel: progressResult.newLevel
-=======
         newLevel: progressResult.newLevel,
         currentStreak: progressResult.currentStreak
->>>>>>> Stashed changes
       };
     } catch (error) {
       // Se houver erro ao adicionar XP (limite diário), desfaz a conclusão da tarefa

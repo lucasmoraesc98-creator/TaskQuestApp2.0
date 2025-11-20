@@ -7,16 +7,8 @@ async function bootstrap() {
 
   // Configuração CORS para o frontend
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://192.168.0.0/16', // Common home network IP range
-      'http://10.0.0.0/8', // Another common private network range
-      'https://taskquest.vercel.app' // Potential production URL
-    ],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
   });
 
   // Validação global

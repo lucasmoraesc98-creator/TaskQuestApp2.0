@@ -1,50 +1,45 @@
 ﻿import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3001';
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+  timeout: 10000,
 });
 
 // Interceptor para adicionar token automaticamente
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Interceptor para tratar erros
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
+    console.error('❌ Erro na API:', error.response?.data || error.message);
+    
     if (error.response?.status === 401) {
+      console.log('🔒 Não autorizado, limpando autenticação...');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // Só redirecionar se não estiver já na página de login
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
+    
     return Promise.reject(error);
   }
 );
 
 export default api;
-export interface User {
-  _id: string;
-  name: string;
-  email: string;
-  level: number;
-  xp: number;
-  goals: string[];
-  challenges: string[];
-  preferences: {
-    morningPerson: boolean;
-    likesExercise: boolean;
-    worksFromHome: boolean;
-  };
-  productivityStyle: string;
-  lastActive?: string;
-  lastAnalysis?: string;
-}
-
-// ... outros tipos

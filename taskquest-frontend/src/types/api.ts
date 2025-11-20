@@ -4,6 +4,8 @@
   email: string;
   level: number;
   xp: number;
+  dailyXP: number;
+  currentStreak: number;
   goals: string[];
   challenges: string[];
   preferences: {
@@ -17,19 +19,17 @@
 }
 
 export interface Task {
-  user: any;
-  task: any;
-  _id: string;
-  userId: string;
-  text: string;
+  id: string;
+  title: string;
+  description: string;
   completed: boolean;
   xp: number;
-  type: string;
-  reason?: string;
-  date: string;
-  completedAt?: string;
+  type: 'standard' | 'ai_suggestion' | 'health';
+  priority: 'low' | 'medium' | 'high';
+  estimatedTime: number;
   createdAt: string;
-  updatedAt: string;
+  completedAt?: string;
+  userId: string;
 }
 
 export interface LoginData {
@@ -46,10 +46,14 @@ export interface RegisterData {
 }
 
 export interface AISuggestion {
-  text: string;
+  id: string;
+  title: string;
+  description: string;
   xp: number;
-  type: string;
-  reason: string;
+  priority: 'high' | 'medium' | 'low';
+  estimatedTime: number;
+  relatedGoal: string;
+  analysis: string;
 }
 
 export interface AuthContextType {
@@ -58,4 +62,15 @@ export interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+}
+
+export interface UserGoals {
+  incomeSources: string[];
+  workChallenges: string[];
+  healthChallenges: string[];
+  shortTermGoals: string[];
+  longTermGoals: string[];
+  currentFocus: string;
+  desiredAnnualIncome?: number;
+  currentAnnualIncome?: number;
 }
