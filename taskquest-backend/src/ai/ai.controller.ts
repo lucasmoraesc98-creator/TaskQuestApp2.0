@@ -1,55 +1,28 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common'; // Removido Get
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, UseGuards, Request, Inject } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-import { AiService } from './ai.service';
+import { UnifiedAIService } from './unified-ai.service';
+import { DeepSeekAIService } from './deepseek-ai.service'; // ✅ Adicione esta importação
 
 @ApiTags('ai')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+//@UseGuards(JwtAuthGuard)
 @Controller('ai')
-export class AiController {
-  constructor(private readonly aiService: AiService) {}
+export class AIController {
+  constructor(
+    private readonly unifiedAIService: UnifiedAIService,
+    private readonly mixtralAI: DeepSeekAIService, // ✅ Adicione esta injeção
+  ) {}
 
-  @Post('suggestions')
-  @ApiOperation({ summary: 'Gerar sugestões de tarefas usando IA (com rotação)' })
-  @ApiResponse({ status: 200, description: 'Sugestões geradas com sucesso' })
-  async generateRotatedSuggestions(
-    @Request() req,
-    @Body() body: { count?: number },
-  ) {
-    const user = req.user;
-    return this.aiService.generateRotatedSuggestions(
-      user._id, 
-      user.goals || [], 
-      user.challenges || [], 
-      body.count || 3
-    );
+  @Get('recommendations')
+  @ApiOperation({ summary: 'Obter recomendações personalizadas baseadas no plano anual' })
+  async getRecommendations(@Request() req) {
+    return this.unifiedAIService.generatePersonalizedRecommendations(req.user._id);
   }
 
-  @Post('personalized-tasks')
-  @ApiOperation({ summary: 'Gerar tarefas personalizadas (método legado)' })
-  async generatePersonalizedTasks(
-    @Request() req,
-    @Body() body: { goals: string[]; challenges: string[] },
-  ) {
-    return this.aiService.generatePersonalizedTasks(
-      req.user._id,
-      body.goals,
-      body.challenges
-    );
-  }
-
-  @Post('analyze-distribution')
-  @ApiOperation({ summary: 'Analisar distribuição de tarefas' })
-  async analyzeDistribution(@Body() body: { tasks: any[] }) {
-    return this.aiService.analyzeTaskDistribution(body.tasks);
-  }
-
-  @Post('test-openai')
-  @ApiOperation({ summary: 'Testar chave da OpenAI' })
-  async testOpenAI(@Body() body: { apiKey: string }) {
-    const isValid = await this.aiService.testOpenAIKey(body.apiKey);
-    return { valid: isValid };
+  @Get('test-mixtral')
+  @ApiOperation({ summary: 'Testar conexão com Mixtral AI' })
+  async testMixtralConnection() {
+    return this.mixtralAI.testConnection();
   }
 }

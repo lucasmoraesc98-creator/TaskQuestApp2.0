@@ -33,6 +33,7 @@ export class CreateTaskDto {
   aiData?: {
     reason?: string;
     suggestionType?: string;
+    easyGoalId?: string;
   };
 
   @ApiProperty({ required: false })
@@ -40,6 +41,5 @@ export class CreateTaskDto {
   @IsString()
   reason?: string;
 
-  // userId será injetado do JWT
   userId: string;
 }

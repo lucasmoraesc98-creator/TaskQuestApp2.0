@@ -13,7 +13,8 @@ import Settings from './pages/Settings';
 import Analysis from './pages/Analysis';
 import Books from './pages/Books';
 import DebugAuth from './pages/DebugAuth';
-
+import AnnualPlanPage from './pages/AnnualPlanPage';
+import { CircularProgress, Typography } from '@mui/material';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -54,7 +55,7 @@ const theme = createTheme({
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
-  console.log('🛡️ ProtectedRoute - loading:', loading, 'user:', user);
+  console.log('🛡️ ProtectedRoute:', { loading, user: user ? 'Authenticated' : 'Not authenticated' });
 
   if (loading) {
     return (
@@ -65,12 +66,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
         height: '100vh',
         color: '#00D4FF'
       }}>
-        🔄 Verificando autenticação...
+        <div style={{ textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography style={{ marginTop: '1rem' }}>
+            Verificando autenticação...
+          </Typography>
+        </div>
       </div>
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) {
+    console.log('🛡️ Redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 // Layout para rotas protegidas que inclui o Navbar
@@ -110,6 +121,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/annual-plan" element={<AnnualPlanPage />} />
               <Route 
                 path="/analysis" 
                 element={
@@ -129,6 +141,7 @@ function App() {
                     </ProtectedLayout>
                   </ProtectedRoute>
                 } 
+              
               />
               <Route 
                 path="/settings" 

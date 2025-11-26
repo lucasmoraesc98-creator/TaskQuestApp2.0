@@ -8,13 +8,14 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
-import { AiModule } from './ai/ai.module';
+import { AIModule } from './ai/ai.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { ProgressModule } from './progress/progress.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { GoalsModule } from './goals/goals.module';
-
+import { ResetModule } from './reset/reset.module';
+import { PlanAdjustmentModule } from './plan-adjustment/plan-adjustment.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -35,7 +36,9 @@ import { GoalsModule } from './goals/goals.module';
     AuthModule,
     UsersModule,
     TasksModule,
-    AiModule,
+    ResetModule,
+    PlanAdjustmentModule,
+    AIModule,
     AnalysisModule,
     IntegrationsModule,
     ProgressModule,

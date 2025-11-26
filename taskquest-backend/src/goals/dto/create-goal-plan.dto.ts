@@ -27,5 +27,10 @@ export class CreateGoalPlanDto {
   @IsOptional()
   hoursPerWeek?: number;
 
-
+  // ✅ ADICIONAR SKILLS
+  @ApiProperty({ required: false })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  skills?: string[];
 }

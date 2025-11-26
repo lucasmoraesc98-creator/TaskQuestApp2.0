@@ -1,55 +1,56 @@
-import { Controller, Get, Redirect } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
-@ApiTags('app')
+@ApiTags('App')
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  @ApiOperation({
-    summary: 'Health check da API',
-    description: 'Endpoint para verificar se a API está funcionando',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'API está funcionando corretamente',
-    schema: {
-      example: {
-        message: 'TaskQuest API está online! 🚀',
-        timestamp: '2024-01-15T10:30:00.000Z',
-        version: '1.0.0',
-      },
-    },
-  })
-  getHello() {
+  @ApiOperation({ summary: 'Endpoint raiz da API' })
+  @ApiResponse({ status: 200, description: 'API está funcionando' })
+  getHello(): object {
     return this.appService.getHello();
   }
 
   @Get('health')
-  @ApiOperation({ summary: 'Status de saúde da aplicação' })
-  @ApiResponse({
-    status: 200,
-    description: 'Status de saúde retornado com sucesso',
+  @ApiOperation({ summary: 'Health Check da aplicação' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Status de saúde da aplicação',
     schema: {
       example: {
-        status: 'ok',
+        status: 'OK',
         timestamp: '2024-01-15T10:30:00.000Z',
+        service: 'TaskQuest Backend',
+        version: '1.0.0',
         uptime: 3600,
-        memory: {
-          used: '45.2 MB',
-          total: '512 MB',
-        },
-      },
-    },
+        database: 'connected'
+      }
+    }
   })
-  getHealth() {
-    return this.appService.getHealth();
+  healthCheck(): object {
+    return {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      service: 'TaskQuest Backend',
+      version: '1.0.0',
+      uptime: process.uptime(),
+      database: 'connected'
+    };
   }
 
-  // Redirecionamento opcional para a documentação
-  @Get('api')
-  @Redirect('/docs', 301)
-  redirectToDocs() {}
+  @Get('protected-test')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Endpoint protegido para teste de autenticação' })
+  @ApiResponse({ status: 200, description: 'Acesso permitido' })
+  @ApiResponse({ status: 401, description: 'Não autorizado' })
+  protectedTest(): object {
+    return {
+      message: 'Você tem acesso a esta rota protegida!',
+      timestamp: new Date().toISOString()
+    };
+  }
 }

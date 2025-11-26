@@ -1,41 +1,62 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ProgressService } from '../progress/progress.service';
-import { TasksService } from '../tasks/tasks.service'; // CORREÇÃO: Importar TasksService
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { TasksService } from '../tasks/tasks.service';
+import { GoalPlan, GoalPlanDocument } from '../goals/schemas/goal-plan.schema';
+import { GoalToTaskConverterService } from '../goals/goal-to-task.converter.service';
+import { DailyTasksService } from '../tasks/daily-tasks.service'; // ✅ ADICIONADO
 
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
 
   constructor(
-    private progressService: ProgressService,
-    private tasksService: TasksService, // CORREÇÃO: Usar TasksService
+    @InjectModel(GoalPlan.name) private goalPlanModel: Model<GoalPlanDocument>,
+    private tasksService: TasksService,
+    private goalToTaskConverter: GoalToTaskConverterService,
+    private dailyTasksService: DailyTasksService, // ✅ ADICIONADO
   ) {}
 
-  // Executa todos os dias à meia-noite
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_DAY_AT_6AM)
   async handleDailyReset() {
-    this.logger.log('🔄 Iniciando reset diário de progresso...');
+    this.logger.log('🔄 Iniciando atualização diária de tasks...');
     
     try {
-      // Aqui você precisaria obter todos os usuários
-      // Por enquanto é um placeholder
-      this.logger.log('✅ Reset diário concluído');
-    } catch (error) {
-      this.logger.error('❌ Erro no reset diário:', error);
-    }
-  }
+      const activePlans = await this.goalPlanModel.find({ 
+        isActive: true,
+        isConfirmed: true 
+      }).exec();
+      
+      this.logger.log(`📊 Encontrados ${activePlans.length} planos ativos`);
 
-  // Executa a cada hora para verificar tarefas pendentes
-  @Cron(CronExpression.EVERY_HOUR)
-  async handleHourlyTasks() {
-    this.logger.log('⏰ Verificando tarefas pendentes...');
-    
-    try {
-      // Lógica para notificar usuários sobre tarefas pendentes
-      this.logger.log('✅ Verificação horária concluída');
+      for (const plan of activePlans) {
+        try {
+          // ✅ CORRIGIDO: Usando dailyTasksService injetado
+          const quarterUpdated = await this.dailyTasksService.checkAndUpdateQuarter(plan);
+          
+          if (quarterUpdated) {
+            this.logger.log(`🔄 Novo trimestre iniciado para usuário ${plan.userId}`);
+          }
+
+          // ✅ CORRIGIDO: Usando dailyTasksService injetado
+          const hasTodaysTasks = await this.dailyTasksService.hasTodaysDailyTasks(plan.userId.toString());
+          
+          if (!hasTodaysTasks) {
+            await this.dailyTasksService.createTodaysPriorityTasks(plan.userId.toString(), plan);
+            this.logger.log(`✅ Novas daily tasks criadas para usuário: ${plan.userId}`);
+          } else {
+            this.logger.log(`✅ Usuário ${plan.userId} já tem daily tasks para hoje`);
+          }
+
+        } catch (error) {
+          this.logger.error(`❌ Erro ao processar usuário ${plan.userId}:`, error);
+        }
+      }
+      
+      this.logger.log('✅ Atualização diária concluída');
     } catch (error) {
-      this.logger.error('❌ Erro na verificação horária:', error);
+      this.logger.error('❌ Erro na atualização diária:', error);
     }
   }
 }

@@ -1,5 +1,5 @@
 import { 
-  Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request 
+  Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, Logger 
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -7,12 +7,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { User } from '../users/schemas/user.schema'; // Ajuste o caminho conforme sua estrutura
+import { GetUser } from '../auth/decorators/get-user.decorator'; // Ajuste o caminho
 
 @ApiTags('tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
 export class TasksController {
+  private readonly logger = new Logger(TasksController.name); // Logger adicionado
+
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
@@ -67,6 +71,15 @@ export class TasksController {
     return this.tasksService.completeTask(id);
   }
 
+  @Put('health/:id/complete')
+  async completeHealthTask(
+    @Param('id') taskId: string,
+    @GetUser() user: User,
+  ) {
+    this.logger.log(`🏥 Completando tarefa de saúde ${taskId} para usuário ${user._id}`);
+    return this.tasksService.completeTask(taskId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Excluir tarefa' })
   async remove(@Param('id') id: string) {
@@ -78,5 +91,12 @@ export class TasksController {
   async resetDaily(@Request() req) {
     await this.tasksService.resetDailyTasks(req.user._id);
     return { message: 'Tarefas do dia resetadas com sucesso' };
+  }
+
+  @Post('initialize-basic')
+  @ApiOperation({ summary: 'Inicializar tarefas básicas do dia' })
+  async initializeBasicTasks(@Request() req) {
+    await this.tasksService.initializeBasicTasks(req.user._id);
+    return { message: 'Tarefas básicas inicializadas com sucesso' };
   }
 }

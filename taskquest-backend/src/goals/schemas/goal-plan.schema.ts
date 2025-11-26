@@ -1,67 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type GoalPlanDocument = GoalPlan & Document;
-
-class Goal {
-  @Prop({ required: true })
-  id: string;
-
-  @Prop({ required: true })
-  title: string;
-
-  @Prop({ required: true })
-  description: string;
-
-  @Prop()
-  category?: string;
-
-  @Prop({ required: true })
-  deadline: string;
-
-  @Prop({ default: 0 })
-  progress: number;
-
-  @Prop({ default: 0 })
-  xpValue: number;
-
-  // Para hard goals
-  @Prop()
-  hardGoalId?: string;
-
-  // Para medium goals  
-  @Prop()
-  mediumGoalId?: string;
-}
-
-class DailyTask {
-  @Prop({ required: true })
-  id: string;
-
-  @Prop({ required: true })
-  title: string;
-
-  @Prop({ required: true })
-  description: string;
-
-  @Prop({ required: true })
-  easyGoalId: string;
-
-  @Prop({ required: true })
-  date: string;
-
-  @Prop({ default: false })
-  completed: boolean;
-
-  @Prop({ default: 100 })
-  xpValue: number;
-
-  @Prop({ default: 'pending' })
-  status: string;
-
-  @Prop()
-  completedAt?: Date;
-}
+export type GoalPlanDocument = GoalPlan & Document & {
+  createdAt: Date;
+  updatedAt: Date;
+}; // ✅ CORREÇÃO: Adicionar createdAt e updatedAt ao tipo
 
 @Schema({ timestamps: true })
 export class GoalPlan {
@@ -71,35 +14,102 @@ export class GoalPlan {
   @Prop({ required: true })
   vision: string;
 
-  @Prop({ type: [Goal] })
-  hardGoals: Goal[];
+  @Prop({ type: [String], default: [] })
+  goals: string[];
 
-  @Prop({ type: [Goal] })
-  mediumGoals: Goal[];
+  @Prop({ type: [String], default: [] })
+  challenges: string[];
 
-  @Prop({ type: [Goal] })
-  easyGoals: Goal[];
+  @Prop({ type: [String], default: [] })
+  tools: string[];
 
-  @Prop({ type: [DailyTask] })
-  dailyTasks: DailyTask[];
+  @Prop({ type: [String], default: [] })
+  skills: string[];
+
+  @Prop({ default: 10 })
+  hoursPerWeek: number;
+
+  // ✅ NOVA ESTRUTURA: Planos trimestrais
+  @Prop({ type: Object, default: {} })
+  quarters: {
+    [quarter: number]: {
+      quarter: number;
+      startDate: Date;
+      endDate: Date;
+      hardGoals: any[];
+      mediumGoals: any[];
+      easyGoals: any[];
+      isCompleted: boolean;
+      progress: number;
+    };
+  };
+
+  @Prop({ default: 1 })
+  currentQuarter: number;
+
+  @Prop({ type: [Object], default: [] })
+  extremeGoals: any[];
+
+  @Prop({ type: [Object], default: [] })
+  hardGoals: any[];
+
+  @Prop({ type: [Object], default: [] })
+  mediumGoals: any[];
+
+  @Prop({ type: [Object], default: [] })
+  easyGoals: any[];
+
+  @Prop({ type: [Object], default: [] })
+  dailyTasks: any[];
 
   @Prop({ default: 0 })
   overallProgress: number;
 
-  @Prop({ default: true })
+  @Prop({ default: false })
   isActive: boolean;
 
-  @Prop({ default: Date.now })
+  @Prop({ default: false })
+  isConfirmed: boolean;
+
+  @Prop({ type: Date })
+  confirmedAt: Date;
+
+  @Prop({ type: Date, default: Date.now })
   startDate: Date;
 
-  @Prop({ default: () => {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() + 1);
-    return date;
-  }})
+  @Prop({ type: Date })
   endDate: Date;
 
+  @Prop({ default: '' })
+  strategicAnalysis: string;
+
+  @Prop({ default: '' })
+  coverageAnalysis: string;
+
+  // ✅ ATUALIZADO: Histórico de feedback com estrutura melhorada
+  @Prop({ type: [Object], default: [] })
+  feedbackHistory: {
+    feedback: string;
+    userContext?: string;
+    adjustedAt: Date;
+    adjustmentsMade: string[];
+    previousState?: any;
+  }[];
+
+  @Prop({ default: false })
+  needsAdjustment: boolean;
+
+  @Prop({ type: String })
+  adjustmentReason?: string;
+
+  @Prop({ default: 'annual' })
+  planType: string;
+
+  // ✅ ADICIONADO: Campos de timestamp explicitamente
+  @Prop({ type: Date })
   createdAt: Date;
+
+  @Prop({ type: Date })
   updatedAt: Date;
 }
 

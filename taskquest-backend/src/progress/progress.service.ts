@@ -1,28 +1,22 @@
+// taskquest-backend/src/progress/progress.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Progress, ProgressDocument } from './schemas/progress.schema';
 
-
-// Interface para o retorno do addXP
 export interface LevelUpResult {
   leveledUp: boolean;
   levelsGained: number;
   newLevel: number;
+  newXP: number;
+  totalXP: number;
   currentStreak: number;
 }
-
-// Type assertion para o modelo - SOLUÇÃO DEFINITIVA
-type ProgressModelType = Model<ProgressDocument> & {
-  create(doc: Partial<Progress>): Promise<ProgressDocument>;
-  findOne(query: any): Promise<ProgressDocument | null>;
-};
-
 
 @Injectable()
 export class ProgressService {
   constructor(
-    @InjectModel(Progress.name) private progressModel: ProgressModelType,
+    @InjectModel(Progress.name) private progressModel: Model<ProgressDocument>,
   ) {}
 
   async getProgress(userId: string): Promise<ProgressDocument> {
@@ -36,8 +30,7 @@ export class ProgressService {
   }
 
   private async createInitialProgress(userId: string): Promise<ProgressDocument> {
-    // SOLUÇÃO: Usando create com tipagem explícita
-    const progressData: Partial<Progress> = {
+    const progressData = {
       userId,
       level: 1,
       xp: 0,
@@ -50,8 +43,8 @@ export class ProgressService {
       dailyStats: [],
     };
     
-    const result = await this.progressModel.create(progressData);
-    return result;
+    const progress = new this.progressModel(progressData);
+    return progress.save();
   }
 
   async addXP(userId: string, xp: number): Promise<LevelUpResult> {
@@ -79,6 +72,8 @@ export class ProgressService {
       leveledUp: levelResult.leveledUp,
       levelsGained: levelResult.levelsGained,
       newLevel: progress.level,
+      newXP: progress.xp,
+      totalXP: progress.totalXP,
       currentStreak: progress.currentStreak,
     };
   }
@@ -108,9 +103,7 @@ export class ProgressService {
     }
   }
 
-  
   private async updateDailyStats(progress: ProgressDocument, today: string, xp: number): Promise<void> {
-    // Encontrar ou criar estatísticas do dia
     const todayStats = progress.dailyStats.find(stat => stat.date === today);
     
     if (todayStats) {
@@ -124,7 +117,6 @@ export class ProgressService {
       });
     }
 
-    // Calcular XP diário total
     progress.dailyXP = progress.dailyStats
       .filter(stat => stat.date === today)
       .reduce((sum, stat) => sum + stat.xpEarned, 0);
@@ -149,21 +141,15 @@ export class ProgressService {
   }
 
   private calculateLevel(totalXP: number): number {
-    return Math.floor(totalXP / 1000) + 1;
-  }
+  // 1000 XP por level (nível 1: 0-999, nível 2: 1000-1999, etc)
+  return Math.floor(totalXP / 1000) + 1;
+}
 
-  async resetDailyProgress(userId: string): Promise<ProgressDocument> {
-    const progress = await this.getProgress(userId);
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Mantém o streak, apenas reseta estatísticas diárias
-    progress.dailyStats = progress.dailyStats.filter(stat => 
-      stat.date !== today
-    );
-    progress.dailyXP = 0;
-    
-    return progress.save();
-  }
+private calculateXPProgress(totalXP: number, level: number): number {
+  const xpForCurrentLevel = (level - 1) * 1000;
+  const xpInCurrentLevel = totalXP - xpForCurrentLevel;
+  return (xpInCurrentLevel / 1000) * 100;
+}
 
   async getProgressStats(userId: string): Promise<any> {
     const progress = await this.getProgress(userId);
@@ -189,10 +175,22 @@ export class ProgressService {
     };
   }
 
+  // MÉTODOS QUE ESTAVAM FALTANDO - ADICIONADOS
+  async resetDailyProgress(userId: string): Promise<ProgressDocument> {
+    const progress = await this.getProgress(userId);
+    const today = new Date().toISOString().split('T')[0];
+    
+    progress.dailyStats = progress.dailyStats.filter(stat => 
+      stat.date !== today
+    );
+    progress.dailyXP = 0;
+    
+    return progress.save();
+  }
+
   async resetAllProgress(userId: string): Promise<ProgressDocument> {
     const progress = await this.getProgress(userId);
     
-    // Reseta tudo, mas mantém o userId
     progress.level = 1;
     progress.xp = 0;
     progress.totalXP = 0;
@@ -209,7 +207,6 @@ export class ProgressService {
   async fixCorruptedXPData(userId: string): Promise<ProgressDocument> {
     const progress = await this.getProgress(userId);
     
-    // Corrige possíveis inconsistências
     if (progress.xp < 0) progress.xp = 0;
     if (progress.totalXP < 0) progress.totalXP = 0;
     if (progress.level < 1) progress.level = 1;
@@ -217,7 +214,6 @@ export class ProgressService {
     if (progress.longestStreak < 0) progress.longestStreak = 0;
     if (progress.tasksCompleted < 0) progress.tasksCompleted = 0;
     
-    // Recalcula level baseado no totalXP
     const correctLevel = this.calculateLevel(progress.totalXP);
     if (progress.level !== correctLevel) {
       progress.level = correctLevel;
@@ -226,4 +222,3 @@ export class ProgressService {
     return progress.save();
   }
 }
-

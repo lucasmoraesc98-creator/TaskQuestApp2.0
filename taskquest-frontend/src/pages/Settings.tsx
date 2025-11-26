@@ -21,8 +21,9 @@ import {
 import { Settings as SettingsIcon, Add } from '@mui/icons-material';
 import { useAuth } from '../contexts/auth.context';
 import { GoalPlanningWizard } from '../components/goals/GoalPlanningWizard';
-import { GoalProgress } from '../components/goals/GoalProgress';
-
+import GoalProgress from '../components/goals/GoalProgress';
+import { authService } from '../services/auth.service';
+import ResetAccountButton from '../components/reset/REsetAccountButton';
 interface UserGoals {
   incomeSources: string[];
   workChallenges: string[];
@@ -35,7 +36,7 @@ interface UserGoals {
 }
 
 const Settings: React.FC = () => {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [goals, setGoals] = useState<UserGoals>({
@@ -56,7 +57,7 @@ const Settings: React.FC = () => {
   const [newLongTermGoal, setNewLongTermGoal] = useState('');
 const [planningWizardOpen, setPlanningWizardOpen] = useState(false);
 const [currentPlan, setCurrentPlan] = useState<any>(null);
-const [planProgress, setPlanProgress] = useState<any>(null);
+const [planProgress] = useState<any>(null);
 
   useEffect(() => {
     loadUserGoals();
@@ -250,7 +251,7 @@ const [planProgress, setPlanProgress] = useState<any>(null);
       🎯 Plano de 1 Ano com IA
     </Typography>
     {currentPlan ? (
-      <GoalProgress plan={currentPlan} progress={planProgress} />
+      <GoalProgress plan={currentPlan} />
     ) : (
       <Box textAlign="center" py={4}>
         <Typography variant="body1" color="text.secondary" gutterBottom>
@@ -541,13 +542,44 @@ const [planProgress, setPlanProgress] = useState<any>(null);
             {loading ? 'Salvando...' : 'Salvar Objetivos'}
           </Button>
         </Box>
+<Button
+  variant="outlined"
+  color="error"
+  onClick={async () => {
+    if (window.confirm('⚠️ TEM CERTEZA? Isso irá resetar TODOS os seus dados: plano anual, tarefas e progresso!')) {
+      try {
+        await authService.resetUser();
+        window.location.reload();
+      } catch (error) {
+        console.error('Erro ao resetar usuário:', error);
+      }
+    }
+  }}
+  sx={{ mt: 2 }}
+>
 
+<Card sx={{ mt: 3, border: '2px solid', borderColor: 'error.main' }}>
+  <CardContent>
+    <Typography variant="h6" color="error" gutterBottom>
+      ⚠️ Zona de Perigo
+    </Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      Ações irreversíveis que afetam permanentemente sua conta.
+    </Typography>
+    <ResetAccountButton variant="outlined" size="small" />
+  </CardContent>
+</Card>
+
+  🔄 Resetar Todos os Dados (TESTE)
+</Button>
         <Alert severity="info" sx={{ mt: 3 }}>
           💡 <strong>Dica:</strong> Preencha pelo menos 3-4 categorias para que a IA possa criar tarefas mais relevantes para você.
         </Alert>
       </Paper>
     </Container>
+
   );
+  
 };
 
 export default Settings;

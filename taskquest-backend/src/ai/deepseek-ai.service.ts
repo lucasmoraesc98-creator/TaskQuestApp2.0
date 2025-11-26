@@ -2,337 +2,485 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { GoalPlanDocument } from '../goals/schemas/goal-plan.schema';
 
 @Injectable()
 export class DeepSeekAIService {
   private readonly logger = new Logger(DeepSeekAIService.name);
   private apiKey: string;
-  private baseUrl: string;
+  private baseUrl: string = 'https://api.deepseek.com/v1';
+  private model: string = 'deepseek-chat';
 
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
   ) {
     this.apiKey = this.configService.get<string>('DEEPSEEK_API_KEY');
-    this.baseUrl = this.configService.get<string>('DEEPSEEK_API_URL', 'https://api.deepseek.com/v1');
-  }
-
-  async generateYearlyPlan(userData: any): Promise<any> {
-    // Se não tiver API key, usar fallback imediatamente
-    if (!this.apiKey || this.apiKey === 'sua-api-key-aqui') {
-      this.logger.warn('⚠️ API Key não configurada, usando fallback local');
-      return this.generateLocalPlan(userData);
+    
+    if (!this.apiKey) {
+      throw new Error('DEEPSEEK_API_KEY não encontrada no .env - Obtenha em: https://platform.deepseek.com/api_keys');
     }
 
-    const prompt = this.buildYearlyPlanPrompt(userData);
-    
+    this.logger.log('🔧 DeepSeek AI Configurado - Abordagem Trimestral');
+  }
+
+  // ✅ MÉTODO PRINCIPAL: Plano Anual Estratégico
+  async generateStrategicAnnualPlan(userData: any): Promise<any> {
+    this.logger.log('🚀 GERANDO PLANO ANUAL ESTRATÉGICO...');
+
+    const prompt = this.buildStrategicAnnualPrompt(userData);
+    this.logger.log(`📝 Prompt (${prompt.length} caracteres)`);
+
     try {
-      this.logger.log('🌐 Chamando DeepSeek API para gerar plano anual...');
+      const result = await this.generateWithDeepSeek(prompt);
       
+      // ✅ VALIDAÇÃO SIMPLIFICADA
+      this.validateAnnualStructure(result);
+      
+      this.logger.log(`✅ PLANO GERADO: ${result.hardGoals?.length || 0} metas anuais`);
+      return result;
+    } catch (error: any) {
+      this.logger.error(`❌ ERRO: ${error.message}`);
+      throw new Error(`Falha ao gerar plano estratégico: ${error.message}`);
+    }
+  }
+
+  // ✅ MÉTODO PARA FEEDBACK - USANDO O MESMO FORMATO
+  async generatePlanWithFeedback(
+    userData: any,
+    feedback: string,
+    currentPlan: any
+  ): Promise<any> {
+    this.logger.log('🔄 GERANDO PLANO REVISADO COM FEEDBACK...');
+
+    const prompt = this.buildFeedbackPrompt(userData, feedback, currentPlan);
+
+    try {
+      const result = await this.generateWithDeepSeek(prompt);
+      this.logger.log(`✅ PLANO REVISADO GERADO: ${result.hardGoals?.length || 0} metas`);
+      return result;
+    } catch (error: any) {
+      this.logger.error(`❌ ERRO: ${error.message}`);
+      throw new Error(`Falha ao gerar plano com feedback: ${error.message}`);
+    }
+  }
+
+  // ✅ MÉTODO: Ajustar plano existente com feedback
+  async adjustGoalPlan(existingPlan: GoalPlanDocument, feedback: string, userContext?: string): Promise<any> {
+    this.logger.log('🔄 Ajustando plano anual com feedback...');
+
+    try {
+      const prompt = this.buildAdjustmentPrompt(existingPlan, feedback, userContext);
       const response = await firstValueFrom(
         this.httpService.post(
           `${this.baseUrl}/chat/completions`,
           {
-            model: 'deepseek-chat',
+            model: this.model,
             messages: [
               {
-                role: 'system',
-                content: `Você é um especialista em planejamento estratégico e produtividade. 
-                Crie um plano anual detalhado baseado nos objetivos do usuário.`
+                role: "system",
+                content: "Você é um especialista em planejamento estratégico e ajuste de metas. Sua tarefa é ajustar um plano anual existente com base no feedback do usuário, mantendo a estrutura de trimestres e a relação entre metas EXTREME, HARD, MEDIUM e EASY."
               },
               {
-                role: 'user',
-                content: prompt,
-              },
+                role: "user",
+                content: prompt
+              }
             ],
             temperature: 0.7,
             max_tokens: 4000,
-            stream: false,
+            response_format: { type: 'json_object' }
           },
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`,
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            timeout: 60000,
+          }
+        )
+      );
+
+      const content = response.data.choices[0].message.content;
+      if (!content) {
+        throw new Error('Resposta vazia do serviço de IA');
+      }
+
+      // Extrair o JSON da resposta
+      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/);
+      const jsonString = jsonMatch ? jsonMatch[1] : content;
+      const adjustedPlan = JSON.parse(jsonString);
+
+      this.logger.log('✅ Plano ajustado com sucesso com IA');
+      return adjustedPlan;
+    } catch (error) {
+      this.logger.error('Erro ao ajustar plano com IA:', error);
+      throw new Error('Falha ao ajustar plano com IA');
+    }
+  }
+
+  // ✅ ALIAS para compatibilidade com PlanAdjustmentService
+  async generateAdjustedPlan(prompt: string): Promise<any> {
+    this.logger.log('🔄 Gerando plano ajustado via prompt...');
+    
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/chat/completions`,
+          {
+            model: this.model,
+            messages: [
+              {
+                role: "system",
+                content: "Você é um especialista em planejamento estratégico. Retorne APENAS JSON válido."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000,
+            response_format: { type: 'json_object' }
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            timeout: 60000,
+          }
+        )
+      );
+
+      const content = response.data.choices[0].message.content;
+      if (!content) {
+        throw new Error('Resposta vazia do serviço de IA');
+      }
+
+      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/);
+      const jsonString = jsonMatch ? jsonMatch[1] : content;
+      const adjustedPlan = JSON.parse(jsonString);
+
+      this.logger.log('✅ Plano ajustado gerado com sucesso');
+      return adjustedPlan;
+    } catch (error) {
+      this.logger.error('Erro ao gerar plano ajustado:', error);
+      throw new Error('Falha ao gerar plano ajustado com IA');
+    }
+  }
+
+  private buildAdjustmentPrompt(existingPlan: GoalPlanDocument, feedback: string, userContext?: string): string {
+    const hoursPerWeek = existingPlan.hoursPerWeek || 10;
+
+    return `Ajuste o plano anual existente com base no feedback do usuário.
+
+## DADOS DO USUÁRIO:
+- Visão: "${existingPlan.vision}"
+- Horas/Semana: ${hoursPerWeek}h
+- Objetivos: ${existingPlan.goals?.join(', ')}
+
+## CONTEXTO ADICIONAL DO USUÁRIO:
+${userContext || 'Não fornecido'}
+
+## FEEDBACK DO USUÁRIO:
+"${feedback}"
+
+## PLANO ATUAL (JSON):
+${JSON.stringify({
+  strategicAnalysis: existingPlan.strategicAnalysis,
+  hardGoals: existingPlan.hardGoals,
+  mediumGoals: existingPlan.mediumGoals,
+  easyGoals: existingPlan.easyGoals,
+  quarters: existingPlan.quarters,
+}, null, 2)}
+
+## INSTRUÇÕES:
+- Mantenha a estrutura de 4 trimestres
+- Ajuste APENAS as partes problemáticas mencionadas no feedback
+- MANTENHA as partes que estão boas
+- PRESERVE a relação entre metas (EXTREME → HARD → MEDIUM → EASY)
+- Ajuste prazos e descrições se necessário
+- Foco em objetivos REALIZÁVEIS com ${hoursPerWeek}h/semana
+
+## EXEMPLOS DE AJUSTES:
+- Se o usuário disse "preciso ganhar massa, não perder", ajuste as metas de fitness para ganho muscular
+- Se o usuário corrigiu dados (peso, BF, etc.), recalcule as metas baseadas nos dados corretos
+- Se o usuário quer mais foco em uma área, redistribua as metas
+
+## FORMATO DE RESPOSTA:
+Retorne APENAS o JSON completo do plano ajustado, no mesmo formato do plano atual.
+
+PLANO AJUSTADO (JSON):`;
+  }
+
+  private async generateWithDeepSeek(prompt: string): Promise<any> {
+    try {
+      this.logger.log('🔄 Processando com DeepSeek...');
+
+      const requestData = {
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'Você é um especialista em planejamento estratégico. SEMPRE retorne JSON válido e bem formatado sem texto adicional.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 8000,
+        temperature: 0.7,
+        top_p: 0.9,
+        stream: false,
+        response_format: { type: 'json_object' }
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/chat/completions`,
+          requestData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            timeout: 600000,
+          },
+        ),
+      );
+
+      if (!response.data || !response.data.choices || !response.data.choices[0]?.message?.content) {
+        throw new Error('Resposta vazia do DeepSeek');
+      }
+
+      const content = response.data.choices[0].message.content;
+      const tokensUsed = response.data.usage?.total_tokens;
+      
+      this.logger.log(`📥 Resposta recebida: ${tokensUsed} tokens usados`);
+      return this.parseAIResponse(content);
+      
+    } catch (error: any) {
+      this.logger.error(`❌ Erro na API DeepSeek: ${error.message}`);
+      
+      if (error.response?.status === 429) {
+        throw new Error('Limite de taxa excedido. Tente novamente em alguns segundos.');
+      } else if (error.response?.status === 401) {
+        throw new Error('API Key do DeepSeek inválida.');
+      } else if (error.response?.status === 400) {
+        if (error.message.includes('length')) {
+          throw new Error('Objetivos muito longos. Tente ser mais conciso nos objetivos e visão.');
+        }
+        throw new Error('Prompt muito longo. Tente reduzir os objetivos.');
+      }
+      
+      throw error;
+    }
+  }
+
+  private parseAIResponse(content: string): any {
+    try {
+      let jsonString = content.trim();
+      
+      // Extrair JSON de code blocks se existir
+      const jsonCodeBlock = content.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+      if (jsonCodeBlock) {
+        jsonString = jsonCodeBlock[1].trim();
+      }
+
+      // Limpar e validar
+      jsonString = this.cleanAndValidateJson(jsonString);
+      
+      const parsed = JSON.parse(jsonString);
+      
+      // ✅ GARANTIR que temos easyGoals e mediumGoals (necessários para o sistema)
+      if (!parsed.easyGoals) parsed.easyGoals = [];
+      if (!parsed.mediumGoals) parsed.mediumGoals = [];
+      
+      return parsed;
+      
+    } catch (error) {
+      this.logger.error(`❌ Erro no parse do JSON: ${error.message}`);
+      throw new Error(`Resposta da IA em formato inválido: ${error.message}`);
+    }
+  }
+
+  private cleanAndValidateJson(jsonString: string): string {
+    jsonString = jsonString.replace(/\/\/.*$/gm, '');
+    jsonString = jsonString.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+    jsonString = jsonString.replace(/'([^']+)'(?=\s*:)/g, '"$1"');
+    jsonString = jsonString.replace(/(?<!\\)'([^']*?[^\\])?'/g, '"$1"');
+    jsonString = jsonString.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3');
+    jsonString = jsonString.replace(/(?<!\\)\\n/g, '\\\\n');
+    
+    return jsonString.trim();
+  }
+
+  private validateAnnualStructure(parsed: any): void {
+    const required = ['hardGoals'];
+    
+    for (const field of required) {
+      if (!parsed[field] || !Array.isArray(parsed[field])) {
+        throw new Error(`Campo obrigatório ausente: ${field}`);
+      }
+    }
+
+    if (parsed.hardGoals.length === 0) throw new Error('Nenhuma HARD goal gerada');
+  }
+
+  // ✅ PROMPT SIMPLIFICADO E OTIMIZADO
+  private buildStrategicAnnualPrompt(userData: any): string {
+    const currentYear = new Date().getFullYear();
+    const userGoals = userData.goals || [];
+    const hoursPerWeek = userData.hoursPerWeek || 10;
+    const vision = userData.vision || 'Não definida';
+
+    return `Crie um plano anual estratégico baseado nestes dados:
+
+VISÃO: "${vision}"
+HORAS/SEMANA: ${hoursPerWeek}h
+OBJETIVOS: ${userGoals.join(', ')}
+
+## FORMATO REQUERIDO - ATUALIZADO:
+
+{
+  "strategicAnalysis": "Análise estratégica concisa",
+  "hardGoals": [
+    {
+      "id": "hard-1",
+      "title": "Meta anual 1",
+      "description": "Descrição SMART",
+      "category": "career|finance|health|skills|relationships",
+      "deadline": "${currentYear}-12-31",
+      "xpValue": 1000,
+      "progress": 0
+    }
+  ],
+  "mediumGoals": [
+    {
+      "id": "medium-1-1", 
+      "title": "Meta trimestral 1",
+      "description": "Descrição específica",
+      "hardGoalId": "hard-1",
+      "deadline": "${currentYear}-03-31",
+      "xpValue": 300,
+      "progress": 0
+    }
+  ],
+  "easyGoals": [
+    {
+      "id": "easy-1-1-1",
+      "title": "Meta semanal 1",
+      "description": "Ação executável",
+      "mediumGoalId": "medium-1-1",
+      "deadline": "${currentYear}-01-31",
+      "xpValue": 100,
+      "progress": 0,
+      "dailyTasks": [
+        {
+          "id": "daily-1-1-1",
+          "title": "Tarefa diária específica 1",
+          "description": "Descrição detalhada da tarefa",
+          "estimatedMinutes": 30,
+          "priority": "high"
+        },
+        {
+          "id": "daily-1-1-2", 
+          "title": "Tarefa diária específica 2",
+          "description": "Descrição detalhada da tarefa",
+          "estimatedMinutes": 45,
+          "priority": "medium"
+        },
+        {
+          "id": "daily-1-1-3",
+          "title": "Tarefa diária específica 3", 
+          "description": "Descrição detalhada da tarefa",
+          "estimatedMinutes": 60,
+          "priority": "low"
+        }
+      ]
+    }
+  ]
+}
+
+INSTRUÇÕES CRÍTICAS:
+- Cada EASY goal DEVE ter EXATAMENTE 3 dailyTasks
+- Daily tasks devem ser REALIZÁVEIS em 30-60 minutos
+- Foco em objetivos REALIZÁVEIS com ${hoursPerWeek}h/semana
+- Metas devem cobrir TODOS os objetivos do usuário
+
+RETORNE APENAS JSON:`;
+  }
+
+  // ✅ PROMPT PARA FEEDBACK
+  private buildFeedbackPrompt(userData: any, feedback: string, currentPlan: any): string {
+    return `Revise este plano anual com base no feedback:
+
+PLANO ATUAL:
+${JSON.stringify(currentPlan, null, 2).substring(0, 2000)}
+
+FEEDBACK DO USUÁRIO: "${feedback}"
+
+DADOS DO USUÁRIO:
+- Visão: "${userData.vision}"
+- Horas/Semana: ${userData.hoursPerWeek}h
+- Objetivos: ${userData.goals?.join(', ')}
+
+INSTRUÇÕES:
+1. Mantenha a estrutura JSON original
+2. Ajuste com base no feedback
+3. Mantenha realisticidade com ${userData.hoursPerWeek}h/semana
+4. Foco em resultados práticos
+
+RETORNE O PLANO REVISADO EM JSON:`;
+  }
+
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      const requestData = {
+        model: this.model,
+        messages: [{ role: 'user', content: 'Responda em JSON: {"status": "ok", "message": "DeepSeek funcionando"}' }],
+        max_tokens: 50,
+        stream: false,
+        response_format: { type: 'json_object' }
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/chat/completions`,
+          requestData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
             },
             timeout: 30000,
           },
         ),
       );
 
-      this.logger.log('✅ Resposta recebida da DeepSeek');
-      return this.parsePlanResponse(response.data);
+      return {
+        success: true,
+        message: '✅ DeepSeek conectado',
+        details: {
+          model: this.model,
+          tokens_used: response.data.usage?.total_tokens,
+        }
+      };
       
     } catch (error: any) {
-      this.logger.error('❌ Erro ao chamar DeepSeek:', error.response?.data || error.message);
-      this.logger.log('🔄 Usando fallback local...');
-      return this.generateLocalPlan(userData);
-    }
-  }
-
-  private buildYearlyPlanPrompt(userData: any): string {
-    return `
-CRIE UM PLANO ANUAL DETALHADO PARA O USUÁRIO:
-
-VISÃO PRINCIPAL: ${userData.vision}
-
-OBJETIVOS ESPECÍFICOS:
-${userData.goals.map((goal: string, i: number) => `${i+1}. ${goal}`).join('\n')}
-
-DESAFIOS: ${userData.challenges.join(', ')}
-FERRAMENTAS DISPONÍVEIS: ${userData.tools?.join(', ') || 'Nenhuma especificada'}
-HORAS/SEMANA: ${userData.hoursPerWeek || 'Não especificado'}
-
----
-
-CRIE UM PLANO COM ESTA ESTRUTURA:
-
-1. METAS HARD (Anuais - 3-5 objetivos principais)
-2. METAS MEDIUM (Mensais - 3-4 por meta HARD)  
-3. METAS EASY (Semanais - 4-5 por meta MEDIUM)
-
-FORMATO DE RESPOSTA (JSON VÁLIDO):
-{
-  "hardGoals": [...],
-  "mediumGoals": [...],
-  "easyGoals": [...]
-}
-`;
-  }
-
-  private parsePlanResponse(response: any): any {
-    try {
-      const content = response.choices[0]?.message?.content;
-      
-      // Tenta extrair JSON se houver texto adicional
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? jsonMatch[0] : content;
-      
-      const parsed = JSON.parse(jsonString);
-      
-      // Valida estrutura básica
-      if (!parsed.hardGoals || !Array.isArray(parsed.hardGoals)) {
-        throw new Error('Estrutura de metas HARD inválida');
-      }
-      
-      this.logger.log(`📊 Plano gerado: ${parsed.hardGoals.length} HARD, ${parsed.mediumGoals?.length || 0} MEDIUM, ${parsed.easyGoals?.length || 0} EASY`);
-      
-      return parsed;
-      
-    } catch (error) {
-      this.logger.error('❌ Erro ao parsear resposta da IA:', error);
-      throw new Error('Resposta da IA em formato inválido');
-    }
-  }
-
-  private generateLocalPlan(userData: any): any {
-    this.logger.log('🔄 Gerando plano local (fallback)...');
-    
-    const primaryTool = userData.tools?.[0] || 'tecnologias escolhidas';
-    const primaryGoal = userData.goals?.[0] || 'seus objetivos';
-
-    const hardGoals = [
-      {
-        id: 'hard-1',
-        title: `Dominar ${primaryTool} e aplicar em projetos reais`,
-        description: `Desenvolver proficiência em ${primaryTool} através de projetos práticos que demonstrem competência profissional para ${userData.vision}`,
-        category: 'career',
-        deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        successMetrics: [
-          '3 projetos completos no portfolio',
-          'Capacidade de resolver problemas complexos',
-          'Compreensão dos conceitos avançados'
-        ],
-        xpValue: 500,
-        progress: 0
-      },
-      {
-        id: 'hard-2',
-        title: 'Estabelecer presença profissional e networking',
-        description: 'Construir uma rede de contatos profissionais e presença online que abra oportunidades de carreira e colaboração',
-        category: 'career',
-        deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        successMetrics: [
-          'Perfil LinkedIn otimizado com 500+ conexões',
-          'Participação em 3 comunidades técnicas',
-          'Contribuições para projetos open source'
-        ],
-        xpValue: 500,
-        progress: 0
-      },
-      {
-        id: 'hard-3',
-        title: 'Desenvolver habilidades de resolução de problemas',
-        description: 'Aprimorar a capacidade de analisar, decompor e resolver problemas complexos de forma sistemática e eficiente',
-        category: 'skills',
-        deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        successMetrics: [
-          'Resolução de 50+ problemas complexos',
-          'Participação em hackathons ou competições',
-          'Feedback positivo sobre abordagem de problemas'
-        ],
-        xpValue: 500,
-        progress: 0
-      }
-    ];
-
-    const mediumGoals = [
-      // Mês 1-3: Fundamentos
-      {
-        id: 'medium-1-1',
-        title: `Aprender fundamentos de ${primaryTool}`,
-        description: `Compreender os conceitos básicos e criar primeiros projetos em ${primaryTool}`,
-        hardGoalId: 'hard-1',
-        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        month: 1,
-        deliverables: [
-          'Ambiente de desenvolvimento configurado',
-          'Primeiro projeto tutorial concluído',
-          'Documentação de aprendizado'
-        ],
-        xpValue: 150,
-        progress: 0
-      },
-      {
-        id: 'medium-1-2',
-        title: 'Estabecer base de conhecimento teórico',
-        description: 'Desenvolver compreensão sólida dos conceitos teóricos por trás das tecnologias',
-        hardGoalId: 'hard-1',
-        deadline: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-        month: 2,
-        deliverables: [
-          'Revisão de documentação oficial',
-          'Resumo de conceitos-chave',
-          'Mapa mental do ecossistema'
-        ],
-        xpValue: 150,
-        progress: 0
-      },
-      {
-        id: 'medium-1-3',
-        title: 'Criar projeto pessoal inicial',
-        description: 'Desenvolver primeiro projeto independente aplicando conceitos aprendidos',
-        hardGoalId: 'hard-1',
-        deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        month: 3,
-        deliverables: [
-          'Projeto funcional no GitHub',
-          'Documentação do projeto',
-          'Demonstração do projeto'
-        ],
-        xpValue: 150,
-        progress: 0
-      },
-      // Mês 4-6: Aprofundamento
-      {
-        id: 'medium-2-1',
-        title: 'Avançar para conceitos intermediários',
-        description: `Explorar funcionalidades avançadas e padrões de ${primaryTool}`,
-        hardGoalId: 'hard-1',
-        deadline: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString(),
-        month: 4,
-        deliverables: [
-          'Projeto com arquitetura mais complexa',
-          'Implementação de padrões avançados',
-          'Otimização de performance'
-        ],
-        xpValue: 150,
-        progress: 0
-      }
-    ];
-
-    const easyGoals = [
-      // Semana 1-2: Configuração e Fundamentos
-      {
-        id: 'easy-1-1-1',
-        title: 'Configurar ambiente de desenvolvimento',
-        description: 'Instalar e configurar todas as ferramentas necessárias para começar',
-        mediumGoalId: 'medium-1-1',
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        week: 1,
-        actions: [
-          'Instalar IDE/editor',
-          'Configurar versionamento (Git)',
-          'Instalar dependências principais'
-        ],
-        xpValue: 50,
-        category: 'setup',
-        progress: 0
-      },
-      {
-        id: 'easy-1-1-2',
-        title: 'Completar tutorial introdutório',
-        description: 'Seguir um tutorial passo a passo para entender o básico',
-        mediumGoalId: 'medium-1-1',
-        deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        week: 2,
-        actions: [
-          'Escolher tutorial adequado',
-          'Codificar junto com o tutorial',
-          'Fazer anotações do aprendizado'
-        ],
-        xpValue: 50,
-        category: 'learning',
-        progress: 0
-      },
-      {
-        id: 'easy-1-2-1',
-        title: 'Revisar documentação oficial',
-        description: 'Estudar a documentação para compreensão teórica',
-        mediumGoalId: 'medium-1-2',
-        deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-        week: 3,
-        actions: [
-          'Ler guia de introdução',
-          'Explorar exemplos de código',
-          'Criar resumo dos conceitos'
-        ],
-        xpValue: 50,
-        category: 'theory',
-        progress: 0
-      },
-      {
-        id: 'easy-1-3-1',
-        title: 'Planejar primeiro projeto',
-        description: 'Definir escopo e requisitos do projeto inicial',
-        mediumGoalId: 'medium-1-3',
-        deadline: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
-        week: 4,
-        actions: [
-          'Brainstorm de ideias',
-          'Definir funcionalidades',
-          'Criar protótipo no papel'
-        ],
-        xpValue: 50,
-        category: 'planning',
-        progress: 0
-      }
-    ];
-
-    return {
-      hardGoals,
-      mediumGoals,
-      easyGoals
-    };
-  }
-
-  async testConnection(): Promise<boolean> {
-    if (!this.apiKey || this.apiKey === 'sua-api-key-aqui') {
-      return false;
-    }
-
-    try {
-      await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/models`, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          timeout: 10000,
-        }),
-      );
-      return true;
-    } catch (error) {
-      this.logger.error('❌ Falha na conexão com DeepSeek:', error.message);
-      return false;
+      return {
+        success: false,
+        message: '❌ Falha na conexão com DeepSeek',
+        details: {
+          error: error.message,
+          setup_instructions: [
+            '1. Obtenha API key em: https://platform.deepseek.com/api_keys',
+            '2. Adicione DEEPSEEK_API_KEY no .env',
+            '3. Recarregue a aplicação'
+          ]
+        }
+      };
     }
   }
 }

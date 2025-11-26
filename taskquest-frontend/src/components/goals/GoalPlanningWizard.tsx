@@ -21,14 +21,13 @@ import {
 } from '@mui/material';
 import { Add, Close, ArrowForward, ArrowBack } from '@mui/icons-material';
 import { goalPlanningService, CreateGoalPlanDto } from '../../services/goal-planning.service';
-
 interface GoalPlanningWizardProps {
   open: boolean;
   onClose: () => void;
   onPlanCreated: (plan: any) => void;
 }
 
-const steps = ['Visão', 'Objetivos', 'Desafios & Ferramentas', 'Revisão'];
+const steps = ['Visão', 'Objetivos', 'Desafios & Ferramentas & Habilidades', 'Revisão'];
 
 export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
   open,
@@ -46,6 +45,8 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
   const [newChallenge, setNewChallenge] = useState('');
   const [tools, setTools] = useState<string[]>([]);
   const [newTool, setNewTool] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
   const [hoursPerWeek, setHoursPerWeek] = useState(10);
 
   const handleNext = () => {
@@ -89,6 +90,17 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
     setTools(tools.filter(tool => tool !== toolToRemove));
   };
 
+  const handleAddSkill = () => {
+    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
+    setSkills(skills.filter(skill => skill !== skillToRemove));
+  };
+
   const handleCreatePlan = async () => {
     setLoading(true);
     setError('');
@@ -99,11 +111,8 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
         goals,
         challenges,
         tools,
+        skills,
         hoursPerWeek,
-        preferences: {
-          focus: 'career',
-          learningStyle: 'practical'
-        }
       };
 
       const plan = await goalPlanningService.createGoalPlan(planData);
@@ -115,6 +124,7 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
       setGoals([]);
       setChallenges([]);
       setTools([]);
+      setSkills([]);
       setActiveStep(0);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao criar plano com IA');
@@ -274,6 +284,46 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
             <Grid item xs={12}>
               <Card variant="outlined">
                 <CardContent>
+                  <Typography variant="h6" gutterBottom color="primary">
+                    💪 Suas Habilidades Atuais
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
+                    Quais habilidades você já possui? Isso ajuda a IA a criar um plano mais realista.
+                  </Typography>
+                  
+                  <Box display="flex" gap={1} mb={2}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyPress={(e) => handleKeyPress(e, handleAddSkill)}
+                      placeholder="Ex: JavaScript, Gestão de Projetos, Design, Comunicação..."
+                    />
+                    <IconButton color="primary" onClick={handleAddSkill}>
+                      <Add />
+                    </IconButton>
+                  </Box>
+
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {skills.map((skill, index) => (
+                      <Chip
+                        key={index}
+                        label={skill}
+                        onDelete={() => handleRemoveSkill(skill)}
+                        color="info"
+                        variant="outlined"
+                        size="small"
+                      />
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardContent>
                   <Typography variant="h6" gutterBottom>
                     ⏰ Disponibilidade Semanal
                   </Typography>
@@ -347,10 +397,40 @@ export const GoalPlanningWizard: React.FC<GoalPlanningWizardProps> = ({
               </Grid>
             </Grid>
 
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      <strong>💪 Habilidades ({skills.length}):</strong>
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" gap={0.5}>
+                      {skills.map((skill, index) => (
+                        <Chip key={index} label={skill} size="small" color="info" />
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      <strong>⏰ Disponibilidade:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {hoursPerWeek} horas/semana
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
             <Alert severity="success" sx={{ mt: 2 }}>
               🎉 A IA vai criar um plano personalizado com:
-              <br/>• <strong>3-5 Metas Anuais (HARD)</strong>
-              <br/>• <strong>12-20 Metas Mensais (MEDIUM)</strong> 
+              <br/>• <strong>3-5 Metas Anuais (HARD)</strong> cobrindo todos os seus objetivos
+              <br/>• <strong>12-20 Metas Trimestrais (MEDIUM)</strong> 
               <br/>• <strong>48-80 Metas Semanais (EASY)</strong>
               <br/>• <strong>3 Tarefas Diárias</strong> para te guiar até seu objetivo!
             </Alert>

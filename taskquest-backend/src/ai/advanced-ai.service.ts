@@ -60,8 +60,8 @@ export class AdvancedAIService {
     }
   }
 
-  async generateDailyTasks(goalPlan: any): Promise<any[]> {
-    const prompt = this.buildDailyTasksPrompt(goalPlan);
+  async generateDailyTasks(GoalPlan: any): Promise<any[]> {
+    const prompt = this.buildDailyTasksPrompt(GoalPlan);
 
     try {
       const response = await firstValueFrom(
@@ -91,10 +91,10 @@ export class AdvancedAIService {
         ),
       );
 
-      return this.parseDailyTasksResponse(response.data, goalPlan);
+      return this.parseDailyTasksResponse(response.data, GoalPlan);
     } catch (error) {
       this.logger.error('Erro ao gerar tarefas diárias com DeepSeek:', error);
-      return this.generateFallbackDailyTasks(goalPlan);
+      return this.generateFallbackDailyTasks(GoalPlan);
     }
   }
 
@@ -161,23 +161,23 @@ FORMATO DE RESPOSTA (JSON):
 `;
   }
 
-  private buildDailyTasksPrompt(goalPlan: any): string {
+  private buildDailyTasksPrompt(GoalPlan: any): string {
     const today = new Date().toISOString().split('T')[0];
     
     return `
 GERE 3 TAREFAS DIÁRIAS PARA HOJE (${today}):
 
 CONTEXTO DO PLANO:
-Visão: ${goalPlan.vision}
-Progresso Geral: ${goalPlan.overallProgress}%
+Visão: ${GoalPlan.vision}
+Progresso Geral: ${GoalPlan.overallProgress}%
 
 HARD GOALS EM ANDAMENTO:
-${goalPlan.hardGoals.map((goal: any) => 
+${GoalPlan.hardGoals.map((goal: any) => 
   `- ${goal.title} (${goal.progress}% completo)`
 ).join('\n')}
 
 EASY GOALS DA SEMANA:
-${goalPlan.easyGoals.filter((goal: any) => {
+${GoalPlan.easyGoals.filter((goal: any) => {
   const goalDate = new Date(goal.deadline);
   const today = new Date();
   const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -228,7 +228,7 @@ FORMATO (JSON):
     }
   }
 
-  private parseDailyTasksResponse(response: any, goalPlan: any): any[] {
+  private parseDailyTasksResponse(response: any, GoalPlan: any): any[] {
     try {
       const content = response.choices[0]?.message?.content;
       const parsed = JSON.parse(content);
@@ -292,9 +292,9 @@ FORMATO (JSON):
     return { hardGoals, mediumGoals, easyGoals };
   }
 
-  private generateFallbackDailyTasks(goalPlan: any): any[] {
+  private generateFallbackDailyTasks(GoalPlan: any): any[] {
     const today = new Date().toISOString().split('T')[0];
-    const availableEasyGoals = goalPlan.easyGoals.slice(0, 3);
+    const availableEasyGoals = GoalPlan.easyGoals.slice(0, 3);
 
     return availableEasyGoals.map((goal: any, index: number) => ({
       id: `daily-${today}-${index + 1}`,

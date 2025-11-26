@@ -1,3 +1,4 @@
+/* eslint-disable */
 // public/service-worker.js
 const CACHE_NAME = 'taskquest-v1.0.0';
 const API_CACHE_NAME = 'taskquest-api-v1.0.0';

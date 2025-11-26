@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 const axios = require('axios');
 
 async function testDeepSeek() {

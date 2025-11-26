@@ -11,33 +11,58 @@ export class Task {
   @Prop({ required: true })
   text: string;
 
+  @Prop()
+  description?: string;
+
+  @Prop({ default: 20 })
+  xp: number;
+
+  @Prop({ 
+    type: String, 
+    enum: [
+      'health', 
+      'custom', 
+      'basic', 
+      'ai_suggestion',
+      'goal_extreme',
+      'goal_hard', 
+      'goal_medium',
+      'goal_easy',
+      'goal_daily',
+      'plan_review'
+    ], 
+    default: 'custom' 
+  })
+  type: string;
+
+  @Prop({ default: 'medium' })
+  priority: string;
+
   @Prop({ default: false })
   completed: boolean;
 
-  @Prop({ required: true })
-  xp: number;
-
-  @Prop({ required: true, default: 'custom' })
-  type: string;
-
-  @Prop({ default: '' })
-  reason: string;
+  @Prop()
+  completedAt?: Date;
 
   @Prop({ required: true })
-  date: string; // YYYY-MM-DD
+  date: string;
 
   @Prop()
-  completedAt: Date;
+  reason?: string;
 
-  @Prop({ type: Object })
+  @Prop({ type: Object, default: {} })
   aiData?: {
-    reason?: string;
+    deadline?: string;
+    priority?: string;
+    estimatedMinutes?: number;
+    easyGoalId?: string;
+    mediumGoalId?: string;
+    hardGoalId?: string;
+    extremeGoalId?: string;
+    goalType?: 'easy' | 'medium' | 'hard' | 'extreme' | 'review';
+    fromAnnualPlan?: boolean;
     suggestionType?: string;
   };
-
-  // Campos automáticos do timestamps
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);

@@ -18,6 +18,21 @@ export class User extends Document {
   @Prop({ default: 0 })
   xp: number;
 
+  @Prop({ default: 0 })
+  dailyXP: number;
+
+  @Prop({ default: 0 })
+  currentStreak: number;
+
+  @Prop({ default: 0 })
+  longestStreak: number;
+
+  @Prop({ default: 0 })
+  totalXP: number;
+
+  @Prop({ default: 0 })
+  tasksCompleted: number;
+
   @Prop({
     type: {
       morningPerson: { type: Boolean, default: true },
@@ -37,6 +52,9 @@ export class User extends Document {
 
   @Prop({ type: [String], default: [] })
   challenges: string[];
+
+  @Prop({ type: [String], default: [] })
+  tools: string[];
 
   @Prop({ default: 'balanced' })
   productivityStyle: string;

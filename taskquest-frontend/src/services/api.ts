@@ -2,42 +2,39 @@
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
-  timeout: 10000,
+  timeout: 300000000, // Aumente o timeout
 });
 
 // Interceptor para adicionar token automaticamente
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    console.log('🔐 API Request - Token:', token ? 'Present' : 'Missing'); // Debug
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Interceptor para tratar erros
+// Interceptor para tratar erros - SEM redirecionamento automático
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    console.error('❌ Erro na API:', error.response?.data || error.message);
+    console.error('❌ API Error:', {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+      url: error.config?.url
+    });
     
-    if (error.response?.status === 401) {
-      console.log('🔒 Não autorizado, limpando autenticação...');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      
-      // Só redirecionar se não estiver já na página de login
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    }
-    
+    // Não redireciona automaticamente, apenas rejeita a promise
+    // O AuthContext vai lidar com a autenticação
     return Promise.reject(error);
   }
 );
