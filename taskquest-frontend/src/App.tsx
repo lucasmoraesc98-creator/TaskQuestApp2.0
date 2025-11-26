@@ -10,8 +10,18 @@ import { Login } from './pages/Login';
 import { RegisterPage } from './pages/register.page';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
+import Analysis from './pages/Analysis';
+import Books from './pages/Books';
+import DebugAuth from './pages/DebugAuth';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const theme = createTheme({
   palette: {
@@ -63,24 +73,60 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+// Layout para rotas protegidas que inclui o Navbar
+const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div>
+      <Navbar />
+      {children}
+    </div>
+  );
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-          <Router>
+          <Router future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}>
             <Routes>
+              {/* Rotas públicas */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/debug-auth" element={<DebugAuth />} />
+              
+              {/* Rotas protegidas com layout comum */}
               <Route 
                 path="/dashboard" 
                 element={
                   <ProtectedRoute>
-                    <div>
-                      <Navbar />
+                    <ProtectedLayout>
                       <Dashboard />
-                    </div>
+                    </ProtectedLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/analysis" 
+                element={
+                  <ProtectedRoute>
+                    <ProtectedLayout>
+                      <Analysis />
+                    </ProtectedLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/books" 
+                element={
+                  <ProtectedRoute>
+                    <ProtectedLayout>
+                      <Books />
+                    </ProtectedLayout>
                   </ProtectedRoute>
                 } 
               />
@@ -88,14 +134,18 @@ function App() {
                 path="/settings" 
                 element={
                   <ProtectedRoute>
-                    <div>
-                      <Navbar />
+                    <ProtectedLayout>
                       <Settings />
-                    </div>
+                    </ProtectedLayout>
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Rota padrão */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              
+              {/* Rota 404 */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Router>
         </AuthProvider>

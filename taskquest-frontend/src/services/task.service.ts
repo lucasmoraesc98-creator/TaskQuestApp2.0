@@ -2,77 +2,106 @@
 
 export interface Task {
   _id: string;
-  title: string;
-  description: string;
-  xp: number;
-  type: 'ai_suggestion' | 'health' | 'basic';
-  priority: 'high' | 'medium' | 'low';
-  estimatedTime: number;
+  userId: string;
+  text: string;
+  description?: string;
   completed: boolean;
+  xp: number;
+  type: string;
+  reason?: string;
+  date: string;
+  completedAt?: Date;
   createdAt: string;
-  category?: string;
-  dailyReset?: boolean;
+  updatedAt: string;
+  aiData?: {
+    reason?: string;
+    suggestionType?: string;
+  };
+}
+
+export interface CreateTaskDto {
+  text: string;
+  xp: number;
+  completed?: boolean;
+  date?: string;
+  type?: string;
+  reason?: string;
+  aiData?: {
+    reason?: string;
+    suggestionType?: string;
+  };
+}
+
+export interface UpdateTaskDto {
+  text?: string;
+  xp?: number;
+  completed?: boolean;
+  date?: string;
+  type?: string;
+  reason?: string;
+  aiData?: {
+    reason?: string;
+    suggestionType?: string;
+  };
+}
+
+export interface CompleteTaskResponse {
+  task: Task;
+  user: { xp: number; level: number };
+  leveledUp?: boolean;
+  newLevel?: number;
+  currentStreak?: number;
+}
+
+export interface TodayStats {
+  total: number;
+  completed: number;
+  pending: number;
+  completionRate: number;
+  totalXP: number;
+  xpByType: {
+    highImpact: number;
+    mediumImpact: number;
+    lowImpact: number;
+  };
 }
 
 export const taskService = {
   async getTasks(date?: string): Promise<Task[]> {
     try {
       const response = await api.get('/tasks', { params: { date } });
+      console.log('📥 Tarefas carregadas:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      // Mock data for development
-      return [
-        {
-          _id: '1',
-          title: '💧 Beber 2L de água',
-          description: 'Manter-se hidratado durante o dia',
-          xp: 20,
-          type: 'health',
-          priority: 'medium',
-          estimatedTime: 0,
-          completed: false,
-          createdAt: new Date().toISOString(),
-          dailyReset: true
-        },
-        {
-          _id: '2',
-          title: 'Estudar TypeScript por 45min',
-          description: 'Aprender conceitos avançados de TypeScript',
-          xp: 100,
-          type: 'ai_suggestion',
-          priority: 'high',
-          estimatedTime: 45,
-          completed: false,
-          createdAt: new Date().toISOString()
-        }
-      ];
+      return [];
     }
   },
 
-  async createTask(taskData: Partial<Task>): Promise<Task> {
+  async createTask(taskData: CreateTaskDto): Promise<Task> {
     try {
-      const response = await api.post('/tasks', taskData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating task:', error);
-      // Mock response for development
-      return {
-        _id: Math.random().toString(36).substr(2, 9),
-        title: taskData.title || '',
-        description: taskData.description || '',
-        xp: taskData.xp || 0,
-        type: taskData.type || 'basic',
-        priority: taskData.priority || 'medium',
-        estimatedTime: taskData.estimatedTime || 0,
-        completed: false,
-        createdAt: new Date().toISOString(),
-        ...taskData
+      console.log('🔄 Criando tarefa:', taskData);
+      const payload = {
+        ...taskData,
+        date: taskData.date || new Date().toISOString().split('T')[0]
       };
+      
+      // Se tiver reason mas não tiver aiData, mover reason para aiData
+      if (taskData.reason && !taskData.aiData) {
+        payload.aiData = { reason: taskData.reason };
+        delete payload.reason;
+      }
+      
+      const response = await api.post('/tasks', payload);
+      console.log('✅ Tarefa criada com sucesso:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erro ao criar task:', error);
+      throw error;
     }
   },
 
-  async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
+  async updateTask(id: string, taskData: UpdateTaskDto): Promise<Task> {
     try {
       const response = await api.put(`/tasks/${id}`, taskData);
       return response.data;
@@ -82,28 +111,23 @@ export const taskService = {
     }
   },
 
-  async completeTask(id: string): Promise<{task: Task; user: {xp: number; level: number}}> {
+  async completeTask(id: string): Promise<CompleteTaskResponse> {
     try {
       const response = await api.put(`/tasks/${id}/complete`);
       return response.data;
     } catch (error) {
       console.error('Error completing task:', error);
-      // Mock response for development
-      const mockTask = await this.getTasks().then(tasks => tasks.find(t => t._id === id));
-      if (!mockTask) throw new Error('Task not found');
-      
-      return {
-        task: { ...mockTask, completed: true },
-        user: { xp: 100, level: 1 }
-      };
+      throw error;
     }
   },
 
   async deleteTask(id: string): Promise<void> {
     try {
       await api.delete(`/tasks/${id}`);
+      console.log('🗑️ Tarefa deletada com sucesso');
     } catch (error) {
       console.error('Error deleting task:', error);
+      throw error;
     }
   },
 
@@ -113,20 +137,20 @@ export const taskService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching stats:', error);
-      // Mock stats for development
       return {
-        completed: 2,
-        total: 5,
-        totalXP: 140,
-        completionRate: 40,
-        pending: 3,
+        completed: 0,
+        total: 0,
+        totalXP: 0,
+        completionRate: 0,
+        pending: 0,
         dailyXPLimit: 400,
-        xpEarnedToday: 140
+        xpEarnedToday: 0,
+        streak: 0
       };
     }
   },
 
   async getDailyXPLimit(): Promise<number> {
-    return 400; // XP diário limite
+    return 400;
   }
 };

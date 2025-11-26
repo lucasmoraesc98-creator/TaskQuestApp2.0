@@ -2,7 +2,7 @@ import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/auth.context';
-import { Dashboard, Settings } from '@mui/icons-material';
+import { Dashboard, Settings, Analytics, AutoStories } from '@mui/icons-material';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -40,6 +40,40 @@ const Navbar: React.FC = () => {
               }}
             >
               Dashboard
+            </Button>
+
+            <Button 
+              color="inherit" 
+              component={Link} 
+              to="/analysis"
+              startIcon={<Analytics />}
+              variant={isActive('/analysis') ? 'outlined' : 'text'}
+              sx={{ 
+                borderRadius: 2,
+                '&.MuiButton-outlined': {
+                  borderColor: 'rgba(0,212,255,0.5)',
+                  backgroundColor: 'rgba(0,212,255,0.1)'
+                }
+              }}
+            >
+              Análises
+            </Button>
+
+            <Button 
+              color="inherit" 
+              component={Link} 
+              to="/books"
+              startIcon={<AutoStories />}
+              variant={isActive('/books') ? 'outlined' : 'text'}
+              sx={{ 
+                borderRadius: 2,
+                '&.MuiButton-outlined': {
+                  borderColor: 'rgba(0,212,255,0.5)',
+                  backgroundColor: 'rgba(0,212,255,0.1)'
+                }
+              }}
+            >
+              Livros
             </Button>
             
             <Button 

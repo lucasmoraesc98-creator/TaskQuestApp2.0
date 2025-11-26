@@ -1,4 +1,13 @@
-﻿import api from './api';
+﻿// auth.service.ts - Versão sem mocks
+import api from './api';
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  xp: number;
+  level: number;
+}
 
 export interface LoginData {
   email: string;
@@ -9,14 +18,6 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
-}
-
-export interface User {
-  _id: string;
-  name: string;
-  email: string;
-  level: number;
-  xp: number;
 }
 
 export interface AuthResponse {
@@ -36,12 +37,12 @@ export const authService = {
   },
 
   async getProfile(): Promise<User> {
-    const response = await api.get<User>('/users/profile');
+    const response = await api.get<User>('/auth/profile');
     return response.data;
   },
 
-  logout() {
+  logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-  }
+  },
 };

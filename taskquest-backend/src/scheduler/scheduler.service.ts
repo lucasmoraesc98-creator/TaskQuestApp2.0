@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ProgressService } from '../progress/progress.service';
-import { TasksService } from '../tasks/tasks.service';
+import { TasksService } from '../tasks/tasks.service'; // CORREÇÃO: Importar TasksService
 
 @Injectable()
 export class SchedulerService {
@@ -9,7 +9,7 @@ export class SchedulerService {
 
   constructor(
     private progressService: ProgressService,
-    private tasksService: TasksService,
+    private tasksService: TasksService, // CORREÇÃO: Usar TasksService
   ) {}
 
   // Executa todos os dias à meia-noite
@@ -23,6 +23,19 @@ export class SchedulerService {
       this.logger.log('✅ Reset diário concluído');
     } catch (error) {
       this.logger.error('❌ Erro no reset diário:', error);
+    }
+  }
+
+  // Executa a cada hora para verificar tarefas pendentes
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleHourlyTasks() {
+    this.logger.log('⏰ Verificando tarefas pendentes...');
+    
+    try {
+      // Lógica para notificar usuários sobre tarefas pendentes
+      this.logger.log('✅ Verificação horária concluída');
+    } catch (error) {
+      this.logger.error('❌ Erro na verificação horária:', error);
     }
   }
 }

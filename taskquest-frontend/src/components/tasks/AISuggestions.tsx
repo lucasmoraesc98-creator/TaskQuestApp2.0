@@ -19,16 +19,13 @@ import { AutoAwesome, Chat, Psychology, Task } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/auth.context';
-import { settingsService, UserGoals } from '../../services/settings.service';
-import { taskService } from '../../services/task.service';
-import { dailyTasksService } from '../../services/dailytasks.service';
+import { taskService, Task as TaskType } from '../../services/task.service';
 
 interface AITask {
   id: string;
-  title: string;
+  text: string;
   description: string;
   xp: number;
-  priority: 'high' | 'medium' | 'low';
   estimatedTime: number;
   relatedGoal: string;
 }
@@ -48,32 +45,102 @@ const AISuggestions: React.FC = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [conversation, setConversation] = useState<Array<{role: string, content: string}>>([]);
-  const [userGoals, setUserGoals] = useState<UserGoals | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  // Buscar objetivos do usuário
-  const { data: goals, isLoading: goalsLoading } = useQuery({
-    queryKey: ['user-goals'],
-    queryFn: () => settingsService.getUserGoals(),
-    enabled: !!user,
-  });
+  // Mock de sugestões da IA para desenvolvimento
+  const mockAISuggestions: AISuggestionsResponse = {
+    analysis: "Baseado nos seus objetivos, recomendo focar em desenvolvimento de skills técnicas e networking. Estas 3 tarefas vão te aproximar dos seus objetivos de carreira.",
+    tasks: [
+      {
+        id: '1',
+        text: 'Estudar TypeScript por 45min',
+        description: 'Focar em tipos avançados e generics',
+        xp: 100,
+        estimatedTime: 45,
+        relatedGoal: 'Desenvolvimento Profissional'
+      },
+      {
+        id: '2', 
+        text: 'Fazer networking no LinkedIn',
+        description: 'Conectar com 3 profissionais da área',
+        xp: 100,
+        estimatedTime: 20,
+        relatedGoal: 'Networking'
+      },
+      {
+        id: '3',
+        text: 'Revisar projeto pessoal',
+        description: 'Refatorar código e adicionar testes',
+        xp: 100,
+        estimatedTime: 60,
+        relatedGoal: 'Portfólio'
+      }
+    ]
+  };
 
-  // Buscar sugestões de IA
+  // Tarefas básicas de saúde
+  const basicTasks = [
+    {
+      id: 'basic-1',
+      text: '💧 Beber 2L de água',
+      description: 'Manter-se hidratado durante o dia',
+      xp: 20,
+      type: 'health' as const,
+    },
+    {
+      id: 'basic-2',
+      text: '🏃 Exercício físico - 30min',
+      description: 'Atividade física para manter a saúde',
+      xp: 20,
+      type: 'health' as const,
+    },
+    {
+      id: 'basic-3',
+      text: '📖 Ler 5 páginas de livro',
+      description: 'Desenvolvimento pessoal através da leitura',
+      xp: 20,
+      type: 'health' as const,
+    },
+    {
+      id: 'basic-4',
+      text: '🍎 3 refeições balanceadas',
+      description: 'Manter alimentação saudável durante o dia',
+      xp: 20,
+      type: 'health' as const,
+    },
+    {
+      id: 'basic-5',
+      text: '🧠 Meditar 10 minutos',
+      description: 'Praticar mindfulness para saúde mental',
+      xp: 20,
+      type: 'health' as const,
+    }
+  ];
+
+  // Buscar sugestões de IA (mock para desenvolvimento)
   const { 
-    data: aiSuggestions, 
+    data: aiSuggestions = mockAISuggestions, 
     isLoading: suggestionsLoading, 
     error, 
     refetch 
   } = useQuery<AISuggestionsResponse, Error>({
     queryKey: ['ai-suggestions'],
-    queryFn: () => settingsService.getAISuggestions(),
-    enabled: !!user && !!goals,
+    queryFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return mockAISuggestions;
+    },
+    enabled: !!user,
   });
 
-  // Mutação para chat com IA
+  // Mutação para chat com IA (mock)
   const chatMutation = useMutation<ChatResponse, Error, string>({
-    mutationFn: (message: string) => settingsService.chatWithAI(message),
+    mutationFn: async (message: string) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        response: `Entendi sua pergunta sobre "${message}". Baseado nos seus objetivos, recomendo focar em tarefas práticas que tragam resultados mensuráveis. Que tal dividir essa meta em tarefas menores?`
+      };
+    },
     onSuccess: (data) => {
       setConversation(prev => [
         ...prev,
@@ -85,20 +152,18 @@ const AISuggestions: React.FC = () => {
   // Mutação para adicionar tarefa da IA
   const addTaskMutation = useMutation({
     mutationFn: (task: AITask) => taskService.createTask({
-      title: task.title,
-      description: task.description,
-      xp: 100, // 100XP para tarefas da IA
+      text: task.text,
+      xp: task.xp,
       type: 'ai_suggestion',
-      priority: task.priority,
-      estimatedTime: task.estimatedTime,
+      reason: task.description,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setSnackbarMessage('Tarefa da IA adicionada com sucesso! +100XP');
       setSnackbarOpen(true);
     },
-    onError: () => {
-      setSnackbarMessage('Erro ao adicionar tarefa');
+    onError: (error: any) => {
+      setSnackbarMessage(error.response?.data?.message || 'Erro ao adicionar tarefa');
       setSnackbarOpen(true);
     },
   });
@@ -106,30 +171,26 @@ const AISuggestions: React.FC = () => {
   // Mutação para adicionar todas as tarefas básicas
   const addAllBasicTasksMutation = useMutation({
     mutationFn: async () => {
-      const basicTasks = dailyTasksService.getBasicTasksConfig();
-      for (const task of basicTasks) {
-        await taskService.createTask({
-          ...task,
-          dailyReset: true
-        });
-      }
+      const promises = basicTasks.map(task => 
+        taskService.createTask({
+          text: task.text,
+          xp: task.xp,
+          type: task.type,
+          reason: task.description,
+        })
+      );
+      await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setSnackbarMessage('Todas as tarefas básicas adicionadas! +100XP total');
       setSnackbarOpen(true);
     },
-    onError: () => {
-      setSnackbarMessage('Erro ao adicionar tarefas básicas');
+    onError: (error: any) => {
+      setSnackbarMessage(error.response?.data?.message || 'Erro ao adicionar tarefas básicas');
       setSnackbarOpen(true);
     },
   });
-
-  useEffect(() => {
-    if (goals) {
-      setUserGoals(goals);
-    }
-  }, [goals]);
 
   const handleChatSubmit = async () => {
     if (!message.trim()) return;
@@ -153,16 +214,6 @@ const AISuggestions: React.FC = () => {
     setSnackbarOpen(false);
   };
 
-  const hasGoals = userGoals && (
-    userGoals.incomeSources.length > 0 ||
-    userGoals.workChallenges.length > 0 ||
-    userGoals.healthChallenges.length > 0 ||
-    userGoals.shortTermGoals.length > 0 ||
-    userGoals.longTermGoals.length > 0
-  );
-
-  const basicTasks = dailyTasksService.getBasicTasksConfig();
-
   return (
     <Card elevation={3} sx={{ height: '100%' }}>
       <CardContent>
@@ -173,15 +224,10 @@ const AISuggestions: React.FC = () => {
           </Typography>
         </Box>
 
-        {!hasGoals && !goalsLoading && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Complete seus objetivos nas Configurações para receber sugestões personalizadas da IA.
-          </Alert>
-        )}
-
         <AnimatePresence>
           {suggestionsLoading && (
             <motion.div
+              key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -197,6 +243,7 @@ const AISuggestions: React.FC = () => {
 
           {error && (
             <motion.div
+              key="error"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -214,8 +261,9 @@ const AISuggestions: React.FC = () => {
             </motion.div>
           )}
 
-          {aiSuggestions && (
+          {aiSuggestions && !suggestionsLoading && (
             <motion.div
+              key="content"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -248,7 +296,7 @@ const AISuggestions: React.FC = () => {
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
                           <Typography variant="h6" gutterBottom>
-                            {task.title}
+                            {task.text}
                           </Typography>
                           <Chip 
                             label={`${task.xp}XP`} 
@@ -272,14 +320,6 @@ const AISuggestions: React.FC = () => {
                             variant="outlined" 
                             size="small" 
                           />
-                          <Chip 
-                            label={
-                              task.priority === 'high' ? '🔴 Alta' : 
-                              task.priority === 'medium' ? '🟡 Média' : '🟢 Baixa'
-                            } 
-                            variant="outlined" 
-                            size="small" 
-                          />
                         </Box>
 
                         <Button
@@ -289,7 +329,7 @@ const AISuggestions: React.FC = () => {
                           onClick={() => handleAddTask(task)}
                           disabled={addTaskMutation.isPending}
                         >
-                          Adicionar às Minhas Tarefas
+                          {addTaskMutation.isPending ? 'Adicionando...' : 'Adicionar às Minhas Tarefas'}
                         </Button>
                       </CardContent>
                     </Card>
@@ -303,13 +343,13 @@ const AISuggestions: React.FC = () => {
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                {basicTasks.map((task, index) => (
-                  <Card key={index} variant="outlined">
+                {basicTasks.map((task) => (
+                  <Card key={task.id} variant="outlined">
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" justifyContent="space-between" alignItems="center">
                         <Box>
                           <Typography variant="body2" fontWeight="500">
-                            {task.title}
+                            {task.text}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {task.description}
@@ -333,7 +373,7 @@ const AISuggestions: React.FC = () => {
                 disabled={addAllBasicTasksMutation.isPending}
                 sx={{ mb: 2 }}
               >
-                Adicionar Todas as Tarefas Básicas
+                {addAllBasicTasksMutation.isPending ? 'Adicionando...' : 'Adicionar Todas as Tarefas Básicas'}
               </Button>
 
               <Button
@@ -429,7 +469,7 @@ const AISuggestions: React.FC = () => {
       {/* Snackbar para feedback */}
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={handleCloseSnackbar}
         message={snackbarMessage}
       />

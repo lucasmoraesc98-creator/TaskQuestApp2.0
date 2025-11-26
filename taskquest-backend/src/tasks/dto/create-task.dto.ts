@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsBoolean, IsOptional, Min, Max } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, Min, Max, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTaskDto {
@@ -29,10 +29,16 @@ export class CreateTaskDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsObject()
   aiData?: {
     reason?: string;
     suggestionType?: string;
   };
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 
   // userId será injetado do JWT
   userId: string;

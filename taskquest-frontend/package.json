@@ -27,7 +27,8 @@
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.45.0",
-    "react-router-dom": "^6.15.0",
+    "react-router-dom": "^6.16.0",
+    "recharts": "^2.8.0",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
     "yup": "^1.3.2"
@@ -36,7 +37,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "build-pwa": "npm run build && node copy-pwa.js"
   },
   "eslintConfig": {
     "extends": [
@@ -56,7 +58,10 @@
       "last 1 safari version"
     ]
   },
-"devDependencies": {
-  "react-scripts": "5.0.1"
-}
+  "devDependencies": {
+    "fs-extra": "^11.3.2",
+    "react-scripts": "5.0.1"
+  },
+  "homepage": ".",
+  "proxy": "http://localhost:3001"
 }

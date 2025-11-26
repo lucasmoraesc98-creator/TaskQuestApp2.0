@@ -2,49 +2,34 @@ import { taskService, Task } from './task.service';
 
 const BASIC_TASKS_CONFIG = [
   {
-    title: '💧 Beber 2L de água',
+    text: '💧 Beber 2L de água',
     description: 'Manter-se hidratado durante o dia',
     xp: 20,
     type: 'health' as const,
-    priority: 'medium' as const,
-    estimatedTime: 0,
-    category: 'hydration'
   },
   {
-    title: '🏃 Exercício físico - 30min',
+    text: '🏃 Exercício físico - 30min',
     description: 'Atividade física para manter a saúde',
     xp: 20,
     type: 'health' as const,
-    priority: 'high' as const,
-    estimatedTime: 30,
-    category: 'exercise'
   },
   {
-    title: '📖 Ler 5 páginas de livro',
+    text: '📖 Ler 5 páginas de livro',
     description: 'Desenvolvimento pessoal através da leitura',
     xp: 20,
     type: 'health' as const,
-    priority: 'medium' as const,
-    estimatedTime: 15,
-    category: 'reading'
   },
   {
-    title: '🍎 3 refeições balanceadas',
+    text: '🍎 3 refeições balanceadas',
     description: 'Manter alimentação saudável durante o dia',
     xp: 20,
     type: 'health' as const,
-    priority: 'high' as const,
-    estimatedTime: 0,
-    category: 'nutrition'
   },
   {
-    title: '🧠 Meditar 10 minutos',
+    text: '🧠 Meditar 10 minutos',
     description: 'Praticar mindfulness para saúde mental',
     xp: 20,
     type: 'health' as const,
-    priority: 'medium' as const,
-    estimatedTime: 10,
-    category: 'meditation'
   }
 ];
 
@@ -56,7 +41,7 @@ export const dailyTasksService = {
       
       // Verificar se as tarefas básicas já existem
       const existingBasicTasks = todayTasks.filter(task => 
-        task.type === 'health' && task.dailyReset
+        task.type === 'health'
       );
       
       if (existingBasicTasks.length < BASIC_TASKS_CONFIG.length) {
@@ -64,13 +49,15 @@ export const dailyTasksService = {
         
         for (const taskConfig of BASIC_TASKS_CONFIG) {
           const exists = existingBasicTasks.some(task => 
-            task.title.includes(taskConfig.title.split(' ')[0]) // Match pelo emoji + primeira palavra
+            task.text === taskConfig.text
           );
           
           if (!exists) {
             await taskService.createTask({
-              ...taskConfig,
-              dailyReset: true
+              text: taskConfig.text,
+              xp: taskConfig.xp,
+              type: taskConfig.type,
+              reason: taskConfig.description,
             });
           }
         }
@@ -87,9 +74,9 @@ export const dailyTasksService = {
       const today = new Date().toISOString().split('T')[0];
       const tasks = await taskService.getTasks(today);
       
-      // Resetar tarefas diárias completadas
+      // Resetar tarefas de saúde completadas
       const resetPromises = tasks
-        .filter(task => task.dailyReset && task.completed)
+        .filter(task => task.type === 'health' && task.completed)
         .map(task => 
           taskService.updateTask(task._id, { 
             completed: false 

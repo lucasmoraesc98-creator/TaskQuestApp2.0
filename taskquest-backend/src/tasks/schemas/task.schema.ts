@@ -17,7 +17,7 @@ export class Task {
   @Prop({ required: true })
   xp: number;
 
-  @Prop({ required: true })
+  @Prop({ required: true, default: 'custom' })
   type: string;
 
   @Prop({ default: '' })
@@ -28,6 +28,12 @@ export class Task {
 
   @Prop()
   completedAt: Date;
+
+  @Prop({ type: Object })
+  aiData?: {
+    reason?: string;
+    suggestionType?: string;
+  };
 
   // Campos automáticos do timestamps
   createdAt: Date;

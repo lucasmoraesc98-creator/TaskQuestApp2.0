@@ -20,7 +20,19 @@ import {
 } from '@mui/material';
 import { Settings as SettingsIcon, Add } from '@mui/icons-material';
 import { useAuth } from '../contexts/auth.context';
-import { settingsService, UserGoals } from '../services/settings.service';
+import { GoalPlanningWizard } from '../components/goals/GoalPlanningWizard';
+import { GoalProgress } from '../components/goals/GoalProgress';
+
+interface UserGoals {
+  incomeSources: string[];
+  workChallenges: string[];
+  healthChallenges: string[];
+  shortTermGoals: string[];
+  longTermGoals: string[];
+  currentFocus: string;
+  currentAnnualIncome?: number;
+  desiredAnnualIncome?: number;
+}
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
@@ -42,6 +54,9 @@ const Settings: React.FC = () => {
   const [newHealthChallenge, setNewHealthChallenge] = useState('');
   const [newShortTermGoal, setNewShortTermGoal] = useState('');
   const [newLongTermGoal, setNewLongTermGoal] = useState('');
+const [planningWizardOpen, setPlanningWizardOpen] = useState(false);
+const [currentPlan, setCurrentPlan] = useState<any>(null);
+const [planProgress, setPlanProgress] = useState<any>(null);
 
   useEffect(() => {
     loadUserGoals();
@@ -49,21 +64,9 @@ const Settings: React.FC = () => {
 
   const loadUserGoals = async () => {
     try {
-      console.log('📥 Carregando objetivos do usuário...');
-      const userGoals = await settingsService.getUserGoals();
-      if (userGoals && (
-        userGoals.incomeSources.length > 0 ||
-        userGoals.workChallenges.length > 0 ||
-        userGoals.healthChallenges.length > 0 ||
-        userGoals.shortTermGoals.length > 0 ||
-        userGoals.longTermGoals.length > 0 ||
-        userGoals.currentFocus
-      )) {
-        console.log('✅ Objetivos carregados:', userGoals);
-        setGoals(userGoals);
-      } else {
-        console.log('📝 Nenhum objetivo salvo anteriormente');
-        // Mantém o estado atual vazio
+      const savedGoals = localStorage.getItem('userGoals');
+      if (savedGoals) {
+        setGoals(JSON.parse(savedGoals));
       }
     } catch (error) {
       console.error('❌ Erro ao carregar objetivos:', error);
@@ -72,12 +75,10 @@ const Settings: React.FC = () => {
 
   const handleSaveGoals = async () => {
     setLoading(true);
-    console.log('💾 Salvando objetivos:', goals);
     
     try {
-      await settingsService.updateUserGoals(goals);
+      localStorage.setItem('userGoals', JSON.stringify(goals));
       setSuccess(true);
-      console.log('✅ Objetivos salvos com sucesso!');
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('❌ Erro ao salvar objetivos:', error);
@@ -243,7 +244,36 @@ const Settings: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
+<Card sx={{ mt: 3 }}>
+  <CardContent>
+    <Typography variant="h6" gutterBottom>
+      🎯 Plano de 1 Ano com IA
+    </Typography>
+    {currentPlan ? (
+      <GoalProgress plan={currentPlan} progress={planProgress} />
+    ) : (
+      <Box textAlign="center" py={4}>
+        <Typography variant="body1" color="text.secondary" gutterBottom>
+          Crie um plano personalizado de 1 ano com IA
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => setPlanningWizardOpen(true)}
+          startIcon={<Add />}
+        >
+          Criar Plano com IA
+        </Button>
+      </Box>
+    )}
+  </CardContent>
+</Card>
 
+// E o wizard:
+<GoalPlanningWizard
+  open={planningWizardOpen}
+  onClose={() => setPlanningWizardOpen(false)}
+  onPlanCreated={setCurrentPlan}
+/>
           {/* Renda Atual e Desejada */}
           <Grid item xs={12} md={6}>
             <Card>
@@ -261,7 +291,7 @@ const Settings: React.FC = () => {
                       value={goals.currentAnnualIncome || ''}
                       onChange={(e) => setGoals(prev => ({
                         ...prev, 
-                        currentAnnualIncome: e.target.value ? Number(e.target.value) : undefined
+                        currentAnnualIncome: e.target.value ? Number(e.target.value) : 0
                       }))}
                       placeholder="0"
                     />
@@ -274,7 +304,7 @@ const Settings: React.FC = () => {
                       value={goals.desiredAnnualIncome || ''}
                       onChange={(e) => setGoals(prev => ({
                         ...prev, 
-                        desiredAnnualIncome: e.target.value ? Number(e.target.value) : undefined
+                        desiredAnnualIncome: e.target.value ? Number(e.target.value) : 0
                       }))}
                       placeholder="0"
                     />

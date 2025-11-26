@@ -1,4 +1,5 @@
-﻿import React, { createContext, useState, useContext, useEffect } from 'react';
+﻿// auth.context.tsx - Versão sem mocks
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService, User, LoginData, RegisterData } from '../services/auth.service';
 
 interface AuthContextData {

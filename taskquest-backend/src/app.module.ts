@@ -13,6 +13,7 @@ import { AnalysisModule } from './analysis/analysis.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { ProgressModule } from './progress/progress.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     IntegrationsModule,
     ProgressModule,
     SchedulerModule,
+    GoalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

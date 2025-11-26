@@ -25,7 +25,7 @@ export class IntegrationsController {
 
   @Post('openai/test')
   @ApiOperation({ summary: 'Testar chave da OpenAI' })
-  async testOpenAI(@Body() body: { apiKey: string }) {
+  async testDeepseek(@Body() body: { apiKey: string }) {
     const isValid = await this.integrationsService.testOpenAIKey(body.apiKey);
     return { valid: isValid };
   }

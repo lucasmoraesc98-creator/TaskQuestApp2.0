@@ -12,13 +12,18 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Alert
+  Alert,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
-import { MoreVert, Delete, Bolt, Warning } from '@mui/icons-material';
+import { MoreVert, Delete, Bolt, Warning, Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, taskService } from '../../services/task.service';
 import { useAuth } from '../../contexts/auth.context';
-import { dailyTasksService } from '../../services/dailytasks.service';
 
 interface TaskListProps {
   tasks: Task[];
@@ -26,29 +31,42 @@ interface TaskListProps {
 
 const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
   const queryClient = useQueryClient();
-  const { setUser, user } = useAuth(); // Agora setUser existe
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [recentXP, setRecentXP] = useState<number>(0);
   const [showXPGain, setShowXPGain] = useState(false);
   const [xpLimitReached, setXpLimitReached] = useState(false);
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskXP, setNewTaskXP] = useState(20);
+
+  // Mutation para adicionar tarefa manual
+  const addTaskMutation = useMutation({
+    mutationFn: (taskData: { text: string; xp: number }) => 
+      taskService.createTask({
+        text: taskData.text,
+        xp: taskData.xp,
+        type: 'basic',
+        reason: 'Tarefa manual'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['today-stats'] });
+      setAddTaskDialogOpen(false);
+      setNewTaskText('');
+      setNewTaskXP(20);
+    },
+    onError: (error: any) => {
+      console.error('Erro ao adicionar tarefa:', error);
+    },
+  });
 
   const completeTaskMutation = useMutation({
     mutationFn: (taskId: string) => taskService.completeTask(taskId),
     onSuccess: (data) => {
-      // Atualiza o usuário com os novos dados de XP
-      if (user && data.user) {
-        const updatedUser = { 
-          ...user, 
-          xp: data.user.xp, 
-          level: data.user.level 
-        };
-        setUser(updatedUser);
-      }
-
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['today-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['user'] });
 
       // Mostra animação de XP ganho
       if (data.task.xp) {
@@ -57,14 +75,12 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
         setTimeout(() => setShowXPGain(false), 3000);
       }
 
-      // Verifica se atingiu o limite de XP
-      const currentXP = dailyTasksService.calculateDailyXP(tasks);
-      if (currentXP + data.task.xp >= 400) {
-        setXpLimitReached(true);
+      if (data.leveledUp) {
+        console.log('🎉 Level UP! Novo level:', data.newLevel);
       }
     },
     onError: (error: any) => {
-      if (error.response?.data?.code === 'XP_LIMIT_REACHED') {
+      if (error.message.includes('Limite diário')) {
         setXpLimitReached(true);
         setTimeout(() => setXpLimitReached(false), 5000);
       }
@@ -81,13 +97,6 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
 
   const handleToggleComplete = (task: Task) => {
     if (!task.completed) {
-      // Verifica se pode ganhar mais XP hoje
-      if (!dailyTasksService.canEarnMoreXP(tasks, task.xp)) {
-        setXpLimitReached(true);
-        setTimeout(() => setXpLimitReached(false), 5000);
-        return;
-      }
-      
       completeTaskMutation.mutate(task._id);
     }
   };
@@ -105,6 +114,15 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
   const handleCloseMenu = () => {
     setAnchorEl(null);
     setSelectedTask(null);
+  };
+
+  const handleAddTask = () => {
+    if (newTaskText.trim()) {
+      addTaskMutation.mutate({
+        text: newTaskText.trim(),
+        xp: newTaskXP
+      });
+    }
   };
 
   const getXPColor = (xp: number) => {
@@ -141,12 +159,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
             <Alert 
               severity="success" 
               icon={<Bolt />}
-              sx={{ 
-                mb: 2,
-                background: 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(102,126,234,0.1) 100%)',
-                border: '1px solid rgba(0,212,255,0.3)',
-                borderRadius: 3,
-              }}
+              sx={{ mb: 2 }}
             >
               <Typography variant="body2" fontWeight="600">
                 +{recentXP} XP ganhos! Continue assim! 🚀
@@ -164,24 +177,31 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
             <Alert 
               severity="warning" 
               icon={<Warning />}
-              sx={{ 
-                mb: 2,
-                background: 'linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(255,107,53,0.05) 100%)',
-                border: '1px solid rgba(255,107,53,0.3)',
-                borderRadius: 3,
-              }}
+              sx={{ mb: 2 }}
             >
               <Typography variant="body2" fontWeight="600">
-                Limite diário de 400XP atingido! Volte amanhã para mais conquistas! 🎯
+                Limite diário de XP atingido! Volte amanhã para mais conquistas! 🎯
               </Typography>
             </Alert>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Typography variant="h6" gutterBottom>
-        Suas Tarefas ({tasks.length})
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">
+          Suas Tarefas ({tasks.length})
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => setAddTaskDialogOpen(true)}
+          sx={{
+            background: 'linear-gradient(135deg, #00D4FF 0%, #667eea 100%)',
+          }}
+        >
+          Adicionar Tarefa
+        </Button>
+      </Box>
       
       {tasks.length === 0 ? (
         <Typography color="textSecondary" textAlign="center" py={4}>
@@ -197,69 +217,53 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                layout
               >
                 <Card 
                   variant="outlined" 
                   sx={{ 
                     borderRadius: 3,
                     background: task.completed 
-                      ? 'linear-gradient(135deg, rgba(76,175,80,0.1) 0%, rgba(76,175,80,0.05) 100%)'
-                      : 'linear-gradient(135deg, rgba(21,21,31,0.9) 0%, rgba(42,42,58,0.9) 100%)',
+                      ? 'rgba(76,175,80,0.1)'
+                      : 'rgba(21,21,31,0.9)',
                     border: task.completed 
                       ? '1px solid rgba(76,175,80,0.3)'
                       : `1px solid ${getTaskTypeColor(task.type)}30`,
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                    }
                   }}
                 >
                   <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Checkbox
-                          checked={task.completed}
-                          onChange={() => handleToggleComplete(task)}
-                          disabled={task.completed || completeTaskMutation.isPending}
-                          sx={{
+                      <Checkbox
+                        checked={task.completed}
+                        onChange={() => handleToggleComplete(task)}
+                        disabled={task.completed || completeTaskMutation.isPending}
+                        sx={{
+                          color: getXPColor(task.xp),
+                          '&.Mui-checked': {
                             color: getXPColor(task.xp),
-                            '&.Mui-checked': {
-                              color: getXPColor(task.xp),
-                            },
-                          }}
-                        />
-                      </motion.div>
+                          },
+                        }}
+                      />
                       
                       <Box sx={{ flex: 1 }}>
                         <Typography 
                           variant="h6" 
-                          component="h3" 
                           sx={{ 
                             textDecoration: task.completed ? 'line-through' : 'none',
                             color: task.completed ? 'text.secondary' : 'text.primary',
                             fontWeight: task.completed ? 400 : 600,
-                            fontSize: '0.95rem'
                           }}
                         >
-                          {task.title}
+                          {task.text}
                         </Typography>
                         
-                        {task.description && (
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            mt={0.5}
-                            sx={{ fontSize: '0.8rem' }}
-                          >
-                            {task.description}
+                        {task.reason && (
+                          <Typography variant="body2" color="text.secondary" mt={0.5}>
+                            {task.reason}
                           </Typography>
                         )}
                         
                         <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
                           <Chip 
-                            icon={<Bolt sx={{ fontSize: 16 }} />}
                             label={`+${task.xp} XP`} 
                             size="small" 
                             sx={{ 
@@ -267,41 +271,19 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
                               color: getXPColor(task.xp),
                               border: `1px solid ${getXPColor(task.xp)}30`,
                               fontWeight: 600,
-                              fontSize: '0.7rem'
                             }}
                           />
                           <Chip 
                             label={getTaskTypeLabel(task.type)} 
                             size="small" 
                             variant="outlined"
-                            sx={{ 
-                              borderRadius: 2,
-                              borderColor: getTaskTypeColor(task.type),
-                              color: getTaskTypeColor(task.type),
-                              fontSize: '0.7rem'
-                            }}
                           />
-                          {task.dailyReset && (
-                            <Chip 
-                              label="🔄 Diária" 
-                              size="small" 
-                              variant="outlined"
-                              sx={{ borderRadius: 2, fontSize: '0.7rem' }}
-                            />
-                          )}
                         </Box>
                       </Box>
                     </Box>
                     
                     {!task.completed && (
-                      <IconButton 
-                        onClick={(e) => handleOpenMenu(e, task)}
-                        sx={{
-                          '&:hover': {
-                            background: 'rgba(255,255,255,0.1)',
-                          }
-                        }}
-                      >
+                      <IconButton onClick={(e) => handleOpenMenu(e, task)}>
                         <MoreVert />
                       </IconButton>
                     )}
@@ -313,12 +295,11 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
         </Box>
       )}
 
+      {/* Menu de contexto */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <MenuItem onClick={() => selectedTask && handleDelete(selectedTask._id)}>
           <ListItemIcon>
@@ -327,6 +308,44 @@ const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
           <ListItemText>Excluir</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Dialog para adicionar tarefa manual */}
+      <Dialog open={addTaskDialogOpen} onClose={() => setAddTaskDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Descrição da tarefa"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            margin="dense"
+            label="XP da tarefa"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={newTaskXP}
+            onChange={(e) => setNewTaskXP(Number(e.target.value))}
+            helperText="XP diário máximo: 400"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddTaskDialogOpen(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleAddTask} 
+            variant="contained"
+            disabled={!newTaskText.trim() || addTaskMutation.isPending}
+          >
+            {addTaskMutation.isPending ? 'Adicionando...' : 'Adicionar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
